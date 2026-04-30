@@ -3,8 +3,8 @@
 # ============================================================
 
 # --- Window ---
-WINDOW_WIDTH = 1400
-WINDOW_HEIGHT = 900
+WINDOW_WIDTH = 1000
+WINDOW_HEIGHT = 700
 WINDOW_TITLE = "Graph Algorithms Visualization Platform"
 FPS = 60
 

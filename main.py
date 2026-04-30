@@ -17,6 +17,7 @@ from utils.constants import (
     WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, FPS,
 )
 
+from ui.widgets import AlgorithmCodePanel
 
 def main() -> None:
     # ------------------------------------------------------------------
@@ -74,6 +75,7 @@ def main() -> None:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
             sandbox.handle_event(event)
+            sandbox._code_panel.handle_event(event)
 
         sandbox.update(dt)
         sandbox.draw()
