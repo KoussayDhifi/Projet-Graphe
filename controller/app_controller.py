@@ -71,7 +71,7 @@ class AppController:
     # Algorithm execution
     # ------------------------------------------------------------------
 
-    def run_algorithm(self, name: str, source: Optional[int] = None) -> None:
+    def run_algorithm(self, name: str, source: Optional[int] = None, **kwargs) -> None:
         """
         Execute a registered algorithm and prepare the animation engine.
 
@@ -79,13 +79,14 @@ class AppController:
         ----------
         name   : str       – registered algorithm name
         source : int|None  – source node for the algorithm
+        kwargs : dict      – additional algorithm-specific arguments
 
         Raises
         ------
         NotImplementedError  – if the algorithm stub hasn't been implemented
         ValueError           – if the name is unknown
         """
-        steps: List[Dict] = run_algorithm(name, self.graph, source)
+        steps: List[Dict] = run_algorithm(name, self.graph, source, **kwargs)
         self.visual_state.reset()
         self._renderer.reset()
         self.engine = AnimationEngine(steps)

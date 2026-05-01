@@ -56,6 +56,9 @@ class SandboxScreen:
         self._error_msg = ""
         self._error_timer = 0.0
 
+        self._selected_algo: Optional[str] = None
+        self._alert_msg: Optional[str] = None
+
         self._setup_fonts()
         self._setup_ui()
 
@@ -138,11 +141,26 @@ class SandboxScreen:
             font_size=13,
         )
 
+        # Alert popup OK button
+        self._btn_alert_ok = Button(
+            pygame.Rect(W // 2 - 40, H // 2 + 30, 80, 32),
+            label="OK",
+            font_size=13,
+        )
+
     # ------------------------------------------------------------------
     # Event handling
     # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        # Alert popup takes priority
+        if self._alert_msg is not None:
+            if self._btn_alert_ok.handle_event(event):
+                self._alert_msg = None
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN):
+                self._alert_msg = None
+            return
+
         # Weight input popup takes priority
         if self._awaiting_weight:
             self._weight_input.handle_event(event)
@@ -157,6 +175,10 @@ class SandboxScreen:
         # Sidebar widgets
         for btn in self._algo_buttons:
             if btn.handle_event(event):
+                for b in self._algo_buttons:
+                    b.active = False
+                btn.active = True
+                self._selected_algo = btn._algo_name
                 self._run_algorithm(btn._algo_name)
 
         if self._btn_play.handle_event(event):
@@ -282,10 +304,14 @@ class SandboxScreen:
         try:
             self.ctrl.run_algorithm(name, source)
             self._status = f"Running {name} from node {source}"
+            self.ctrl.animation_play()
         except NotImplementedError:
             self._set_error(f"{name} is not implemented yet.")
         except Exception as e:
-            self._set_error(str(e))
+            if name == "eulerian":
+                self._alert_msg = str(e)
+            else:
+                self._set_error(str(e))
 
     # ------------------------------------------------------------------
     # Update / Draw
@@ -298,6 +324,8 @@ class SandboxScreen:
         step = self.ctrl.animation_tick(dt)
         if step:
             self._status = f"Animating: {step.get('type', '?')}"
+            if step.get('type') == 'FINAL_PATH' and 'message' in step:
+                self._alert_msg = step['message']
 
     def draw(self) -> None:
         self.surface.fill(COLOR_BG)
@@ -308,6 +336,8 @@ class SandboxScreen:
         self._draw_status()
         if self._awaiting_weight:
             self._draw_weight_popup()
+        if self._alert_msg is not None:
+            self._draw_alert_popup()
 
     def _draw_canvas_bg(self) -> None:
         """Dot-grid canvas background."""
@@ -426,6 +456,20 @@ class SandboxScreen:
         self.surface.blit(lbl, lbl.get_rect(center=(W // 2, H // 2 - 38)))
         self._weight_input.draw(self.surface)
         self._btn_confirm_weight.draw(self.surface)
+
+    def _draw_alert_popup(self) -> None:
+        W, H = WINDOW_WIDTH, WINDOW_HEIGHT
+        overlay = pygame.Surface((W, H), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        self.surface.blit(overlay, (0, 0))
+        popup = pygame.Rect(W // 2 - 250, H // 2 - 60, 500, 120)
+        pygame.draw.rect(self.surface, COLOR_PANEL, popup, border_radius=8)
+        pygame.draw.rect(self.surface, COLOR_BORDER, popup, 2, border_radius=8)
+        
+        lbl = self._font_ui.render(str(self._alert_msg), True, COLOR_TEXT)
+        self.surface.blit(lbl, lbl.get_rect(center=(W // 2, H // 2 - 20)))
+        
+        self._btn_alert_ok.draw(self.surface)
 
     # ------------------------------------------------------------------
     # Geometry helpers
