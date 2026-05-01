@@ -32,19 +32,19 @@ graph_app/
 ├── algorithms/
 │   ├── registry.py                 # Algorithm registry + dispatcher
 │   ├── shortest_path/
-│   │   ├── dijkstra.py             # ← TO IMPLEMENT
-│   │   └── bellman_ford.py         # ← TO IMPLEMENT
+│   │   ├── dijkstra.py             
+│   │   └── bellman_ford.py         
 │   ├── mst/
-│   │   ├── kruskal.py              # ← TO IMPLEMENT
-│   │   └── prim.py                 # ← TO IMPLEMENT
+│   │   ├── kruskal.py              
+│   │   └── prim.py                 
 │   ├── traversal/
-│   │   ├── bfs.py                  # ← TO IMPLEMENT
-│   │   └── dfs.py                  # ← TO IMPLEMENT
+│   │   ├── bfs.py                  
+│   │   └── dfs.py                  
 │   ├── components/
-│   │   ├── connected.py            # ← TO IMPLEMENT
-│   │   └── scc.py                  # ← TO IMPLEMENT
+│   │   ├── connected.py            
+│   │   └── scc.py                  
 │   └── coloring/
-│       └── welsh_powell.py         # ← TO IMPLEMENT
+│       └── welsh_powell.py         
 ├── animation/
 │   ├── events.py                   # Event type constants + make_step()
 │   ├── engine.py                   # Playback engine (step/play/pause)

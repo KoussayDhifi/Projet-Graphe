@@ -13,7 +13,7 @@ from utils.constants import (
     ANIMATION_SPEED_DEFAULT, ANIMATION_SPEED_MIN, ANIMATION_SPEED_MAX,
 )
 from ui.draw import draw_graph, draw_status_bar, draw_tooltip
-from ui.widgets import Button, Slider, TextInput, Label
+from ui.widgets import Button, Slider, TextInput, Label,AlgorithmCodePanel
 
 if TYPE_CHECKING:
     from controller.app_controller import AppController
@@ -114,9 +114,14 @@ class SandboxScreen:
             btn._algo_name = name          # tag for lookup on click
             self._algo_buttons.append(btn)
 
-        # Animation controls
         ctrl_y = H - 160
-        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Play")
+
+        self._code_panel = AlgorithmCodePanel(
+            rect=pygame.Rect(sx, 355, 240, 260) # (990, 355, 240, 260) 
+        )
+        
+        # Animation controls
+        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Playyy")
         self._btn_pause = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y, bw // 2 - 4, 30), "⏸ Pause")
         self._btn_step  = Button(pygame.Rect(sx, ctrl_y + 36, bw // 2 - 4, 30), "⏭ Step")
         self._btn_reset = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y + 36, bw // 2 - 4, 30), "↺ Reset")
@@ -243,9 +248,11 @@ class SandboxScreen:
             if step:
                 self._last_step_type = step.get("type")
                 self._status = f"Step: {step.get('type', '?')}"
+                self._code_panel.set_active_event(step["type"])
         if self._btn_reset.handle_event(event):
             self.ctrl.animation_reset()
             self._last_step_type = None
+            self._code_panel.clear_highlight()
         if self._btn_clear.handle_event(event):
             self.ctrl.clear_graph()
             self._current_algorithm = None
@@ -377,6 +384,9 @@ class SandboxScreen:
             self._code_scroll = 0
             self._status = f"Running {name} from node {source}"
             self.ctrl.animation_play()
+            # Load pseudocode for the selected algorithm and reset highlight
+            self._code_panel.set_algorithm(name)
+            self._code_panel.clear_highlight()
         except NotImplementedError:
             self._set_error(f"{name} is not implemented yet.")
         except Exception as e:
@@ -401,6 +411,8 @@ class SandboxScreen:
                 self._status = f"{algo_name} | Step: {step.get('type', '?')}"
             else:
                 self._status = f"Animating: {step.get('type', '?')}"
+            self._status = f"Animating: {step.get('type', '?')}"
+            self._code_panel.set_active_event(step["type"])
 
     def draw(self) -> None:
         self.surface.fill(COLOR_BG)
@@ -478,6 +490,7 @@ class SandboxScreen:
         self._btn_pause.draw(self.surface)
         self._btn_step.draw(self.surface)
         self._btn_reset.draw(self.surface)
+        self._code_panel.draw(surface=self.surface)
 
         # Speed slider label
         spd_lbl = self._font_small.render("Step speed:", True, COLOR_TEXT_DIM)

@@ -8,6 +8,8 @@ from typing import List, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from core.graph import Graph
 
+from animation.events import make_step, VISIT_NODE, COLOR_NODE
+
 
 def welsh_powell(graph: "Graph", source: int = None) -> List[Dict]:
     """
@@ -41,10 +43,44 @@ def welsh_powell(graph: "Graph", source: int = None) -> List[Dict]:
     ----------
     Time  : O(V² + E)  (dominated by the sorting + neighbour checks)
     Space : O(V)
-
-    Raises
-    ------
-    NotImplementedError
-        Placeholder — to be implemented by the algorithm team.
     """
-    raise NotImplementedError("welsh_powell() has not been implemented yet.")
+    steps: List[Dict] = []
+
+    if not graph.nodes:
+        return steps
+
+    # Build a SYMMETRIC adjacency set regardless of graph.directed.
+    # Colouring is inherently an undirected concept: if u and v share an edge
+    # they must receive different colours no matter which direction the edge
+    # was stored in.  Without always adding BOTH directions, a neighbour that
+    # was coloured before the current node may be invisible in neighbour_colors,
+    # letting the same colour be reused on adjacent nodes.
+    adj: Dict[int, set] = {nid: set() for nid in graph.nodes} # {1:{} , 2:{} ... }
+    for src, dest, _ in graph.edges:
+        adj[src].add(dest)
+        adj[dest].add(src)   # always symmetric — this is the critical fix
+
+    # Sort nodes by degree descending (Welsh-Powell ordering)
+    sorted_nodes = sorted(graph.nodes.keys(), key=lambda n: len(adj[n]), reverse=True)
+
+    # color_map: node_id -> assigned color index
+    color_map: Dict[int, int] = {}
+
+    for node in sorted_nodes:
+        # Emit VISIT_NODE before attempting to colour
+        steps.append(make_step(VISIT_NODE, node=node))
+
+        # Collect colors already used by neighbours
+        neighbour_colors = {color_map[nb] for nb in adj[node] if nb in color_map}
+
+        # Find the smallest non-negative integer not in neighbour_colors
+        color = 0
+        while color in neighbour_colors:
+            color += 1
+
+        color_map[node] = color
+
+        # Emit COLOR_NODE with the assigned color index
+        steps.append(make_step(COLOR_NODE, node=node, color=color))
+
+    return steps
