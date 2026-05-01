@@ -1,5 +1,5 @@
 # ============================================================
-# algorithms/coloring/welsh_powell.py
+# algorithms/eulerian/eulerian.py
 # ============================================================
 
 from __future__ import annotations
