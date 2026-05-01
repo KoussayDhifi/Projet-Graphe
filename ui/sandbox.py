@@ -62,6 +62,7 @@ class SandboxScreen:
 
         self._selected_algo: Optional[str] = None
         self._alert_msg: Optional[str] = None
+        self.return_to_menu = False
 
         self._setup_fonts()
         self._setup_ui()
@@ -146,9 +147,15 @@ class SandboxScreen:
 
         # Clear / export buttons
         self._btn_clear = Button(
-            pygame.Rect(sx, H - 55, bw, 28),
-            "Clear Graph",
+            pygame.Rect(sx, H - 55, bw // 2 - 4, 28),
+            "Clear",
             color=COLOR_DANGER,
+            font_size=13,
+        )
+
+        self._btn_home = Button(
+            pygame.Rect(sx + bw // 2 + 4, H - 55, bw // 2 - 4, 28),
+            "Home",
             font_size=13,
         )
 
@@ -259,6 +266,9 @@ class SandboxScreen:
             self._last_step_type = None
             self._code_scroll = 0
             self._selected = None
+
+        if self._btn_home.handle_event(event):
+            self.return_to_menu = True
 
         if self._code_panel_rect:
             mx, my = pygame.mouse.get_pos()
@@ -498,6 +508,7 @@ class SandboxScreen:
         self._slider_speed.draw(self.surface)
 
         self._btn_clear.draw(self.surface)
+        self._btn_home.draw(self.surface)
 
         # Progress bar
         if self.ctrl.engine:
