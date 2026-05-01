@@ -3,7 +3,8 @@
 # ============================================================
 
 from __future__ import annotations
-from typing import List, Dict, TYPE_CHECKING
+from typing import List, Dict, TYPE_CHECKING, Tuple
+import heapq
 
 if TYPE_CHECKING:
     from core.graph import Graph
@@ -44,4 +45,41 @@ def prim(graph: "Graph", source: int = 0) -> List[Dict]:
     NotImplementedError
         Placeholder — to be implemented by the algorithm team.
     """
-    raise NotImplementedError("prim() has not been implemented yet.")
+    steps: List[Dict] = []
+
+    if graph.node_count() == 0:
+        return [{"type": "final_tree", "edges": []}]
+
+    if source not in graph.nodes:
+        source = next(iter(graph.nodes))
+
+    visited = set([source])
+    mst_edges: List[Tuple[int, int]] = []
+
+    steps.append({"type": "visit_node", "node": source})
+
+    heap: List[Tuple[float, int, int]] = []
+    for neighbor, weight in graph.neighbors(source):
+        steps.append({"type": "explore_edge", "src": source, "dest": neighbor})
+        heapq.heappush(heap, (weight, source, neighbor))
+
+    while heap:
+        weight, src, dest = heapq.heappop(heap)
+        if dest in visited:
+            steps.append({"type": "reject_edge", "src": src, "dest": dest})
+            continue
+
+        visited.add(dest)
+        mst_edges.append((src, dest))
+        steps.append({"type": "select_edge", "src": src, "dest": dest})
+        steps.append({"type": "visit_node", "node": dest})
+
+        for neighbor, w in graph.neighbors(dest):
+            steps.append({"type": "explore_edge", "src": dest, "dest": neighbor})
+            if neighbor not in visited:
+                heapq.heappush(heap, (w, dest, neighbor))
+            else:
+                steps.append({"type": "reject_edge", "src": dest, "dest": neighbor})
+
+    steps.append({"type": "final_tree", "edges": mst_edges})
+    return steps
