@@ -36,6 +36,10 @@ class SandboxScreen:
     def __init__(self, surface: pygame.Surface, controller: "AppController") -> None:
         self.surface  = surface
         self.ctrl     = controller
+        self._current_algorithm: Optional[str] = None
+        self._last_step_type: Optional[str] = None
+        self._code_scroll: int = 0
+        self._code_panel_rect: Optional[pygame.Rect] = None
 
         # Selection state
         self._selected: Optional[int] = None   # first selected node for edge creation
@@ -71,10 +75,12 @@ class SandboxScreen:
             self._font_ui    = pygame.font.SysFont("dejavusans", 14)
             self._font_small = pygame.font.SysFont("dejavusans", 12)
             self._font_bold  = pygame.font.SysFont("dejavusans", 15, bold=True)
+            self._font_code  = pygame.font.SysFont("dejavusansmono", 12)
         except Exception:
             self._font_ui    = pygame.font.Font(None, 16)
             self._font_small = pygame.font.Font(None, 14)
             self._font_bold  = pygame.font.Font(None, 16)
+            self._font_code  = pygame.font.Font(None, 14)
 
     # ------------------------------------------------------------------
     # UI panel construction
@@ -147,6 +153,53 @@ class SandboxScreen:
             label="OK",
             font_size=13,
         )
+        self._algo_code: dict[str, list[str]] = {
+            "kruskal": [
+                "Kruskal(G) :",
+                "A := vide",
+                "pour chaque sommet v de G :",
+                "  creerEnsemble(v)",
+                "trier les aretes de G par poids croissant",
+                "pour chaque arete (u, v) par poids croissant :",
+                "  si find(u) != find(v) :",
+                "    ajouter l'arete (u, v) a A",
+                "    union(u, v)",
+                "renvoyer A",
+            ],
+            "prim": [
+                "Prim(G, s) :",
+                "T := vide",
+                "marquer s comme visite",
+                "ajouter les aretes de s au tas",
+                "tant que le tas n'est pas vide :",
+                "  extraire l'arete (u, v) min",
+                "  si v est deja visite :",
+                "    rejeter l'arete",
+                "  sinon :",
+                "    ajouter l'arete (u, v) a T",
+                "    marquer v comme visite",
+                "    ajouter les aretes de v au tas",
+                "renvoyer T",
+            ],
+        }
+
+        self._algo_step_highlight: dict[str, dict[str, int]] = {
+            "kruskal": {
+                "code_init": 1,
+                "code_sort": 4,
+                "explore_edge": 5,
+                "select_edge": 7,
+                "discard_edge": 5,
+                "final_tree": 9,
+            },
+            "prim": {
+                "visit_node": 2,
+                "explore_edge": 3,
+                "select_edge": 9,
+                "reject_edge": 7,
+                "final_tree": 12,
+            },
+        }
 
     # ------------------------------------------------------------------
     # Event handling
@@ -188,12 +241,28 @@ class SandboxScreen:
         if self._btn_step.handle_event(event):
             step = self.ctrl.animation_step()
             if step:
+                self._last_step_type = step.get("type")
                 self._status = f"Step: {step.get('type', '?')}"
         if self._btn_reset.handle_event(event):
             self.ctrl.animation_reset()
+            self._last_step_type = None
         if self._btn_clear.handle_event(event):
             self.ctrl.clear_graph()
+            self._current_algorithm = None
+            self._last_step_type = None
+            self._code_scroll = 0
             self._selected = None
+
+        if self._code_panel_rect:
+            mx, my = pygame.mouse.get_pos()
+            if self._code_panel_rect.collidepoint(mx, my):
+                if event.type == pygame.MOUSEWHEEL:
+                    self._code_scroll = max(0, self._code_scroll - event.y)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 4:
+                        self._code_scroll = max(0, self._code_scroll - 1)
+                    elif event.button == 5:
+                        self._code_scroll += 1
 
         self._slider_speed.handle_event(event)
         self.ctrl.set_animation_speed(self._slider_speed.value)
@@ -303,6 +372,9 @@ class SandboxScreen:
             source = next(iter(self.ctrl.graph.nodes))
         try:
             self.ctrl.run_algorithm(name, source)
+            self._current_algorithm = name
+            self._last_step_type = None
+            self._code_scroll = 0
             self._status = f"Running {name} from node {source}"
             self.ctrl.animation_play()
         except NotImplementedError:
@@ -323,9 +395,12 @@ class SandboxScreen:
             self._error_timer -= dt
         step = self.ctrl.animation_tick(dt)
         if step:
-            self._status = f"Animating: {step.get('type', '?')}"
-            if step.get('type') == 'FINAL_PATH' and 'message' in step:
-                self._alert_msg = step['message']
+            self._last_step_type = step.get("type")
+            if self._current_algorithm:
+                algo_name = self._current_algorithm.replace("_", " ").title()
+                self._status = f"{algo_name} | Step: {step.get('type', '?')}"
+            else:
+                self._status = f"Animating: {step.get('type', '?')}"
 
     def draw(self) -> None:
         self.surface.fill(COLOR_BG)
@@ -377,6 +452,12 @@ class SandboxScreen:
         title = self._font_bold.render("Algorithms", True, COLOR_TEXT)
         self.surface.blit(title, (sb_rect.x + 10, 14))
 
+        current = self._current_algorithm
+        current_text = f"Current: {current.replace('_', ' ').title()}" if current else "Current: none"
+        current_color = COLOR_ACCENT if current else COLOR_TEXT_DIM
+        current_lbl = self._font_small.render(current_text, True, current_color)
+        self.surface.blit(current_lbl, (sb_rect.x + 10, 36))
+
         # Live graph info
         self._lbl_nodes.text = f"Nodes: {self.ctrl.graph.node_count()}"
         self._lbl_edges.text = f"Edges: {self.ctrl.graph.edge_count()}"
@@ -386,7 +467,11 @@ class SandboxScreen:
 
         # Algorithm buttons
         for btn in self._algo_buttons:
+            btn.active = getattr(btn, "_algo_name", None) == current
+        for btn in self._algo_buttons:
             btn.draw(self.surface)
+
+        self._draw_algorithm_code(sb_rect)
 
         # Animation controls
         self._btn_play.draw(self.surface)
@@ -426,12 +511,106 @@ class SandboxScreen:
                          (0, TOPBAR_HEIGHT), (top_rect.right, TOPBAR_HEIGHT), 1)
         lbl = self._font_bold.render("Graph Algorithms Visualization Platform", True, COLOR_TEXT)
         self.surface.blit(lbl, (14, TOPBAR_HEIGHT // 2 - lbl.get_height() // 2))
+        if self._current_algorithm:
+            algo_name = self._current_algorithm.replace("_", " ").title()
+            algo_lbl = self._font_small.render(f"Algorithm: {algo_name}", True, COLOR_ACCENT)
+            self.surface.blit(algo_lbl, (14, 38))
         hint = self._font_small.render(
             "LClick:add node | Select + LClick:edge | RClick:delete | MMB:pan",
             True, COLOR_TEXT_DIM,
         )
         self.surface.blit(hint, (WINDOW_WIDTH - SIDEBAR_WIDTH - hint.get_width() - 12,
                                  TOPBAR_HEIGHT // 2 - hint.get_height() // 2))
+
+    def _draw_algorithm_code(self, sb_rect: pygame.Rect) -> None:
+        algo_name = self._current_algorithm or ""
+        code_lines = self._algo_code.get(algo_name, [])
+        start_y = 160 + len(self._algo_buttons) * 36 + 10
+        end_y = WINDOW_HEIGHT - 170
+        if end_y <= start_y + 20:
+            return
+
+        panel = pygame.Rect(sb_rect.x + 10, start_y, SIDEBAR_WIDTH - 20, end_y - start_y)
+        self._code_panel_rect = panel
+        pygame.draw.rect(self.surface, (16, 19, 30), panel, border_radius=6)
+        pygame.draw.rect(self.surface, COLOR_BORDER, panel, 1, border_radius=6)
+
+        header = self._font_small.render("Algorithm code", True, COLOR_TEXT)
+        self.surface.blit(header, (panel.x + 8, panel.y + 6))
+
+        if not code_lines:
+            msg = self._font_small.render("Select an algorithm to view code.", True, COLOR_TEXT_DIM)
+            self.surface.blit(msg, (panel.x + 8, panel.y + 28))
+            return
+
+        highlight_map = self._algo_step_highlight.get(algo_name, {})
+        highlight_index = highlight_map.get(self._last_step_type or "", -1)
+
+        def _wrap_line(text: str, max_width: int) -> list[str]:
+            if self._font_code.size(text)[0] <= max_width:
+                return [text]
+            words = text.split(" ")
+            lines: list[str] = []
+            current = ""
+            for word in words:
+                candidate = f"{current} {word}".strip()
+                if self._font_code.size(candidate)[0] <= max_width:
+                    current = candidate
+                else:
+                    if current:
+                        lines.append(current)
+                    current = word
+            if current:
+                lines.append(current)
+            return lines
+
+        max_text_width = panel.width - 20
+        wrapped_lines: list[tuple[int, str]] = []
+        for idx, line in enumerate(code_lines):
+            for segment in _wrap_line(line, max_text_width):
+                wrapped_lines.append((idx, segment))
+
+        line_y = panel.y + 28
+        line_h = self._font_code.get_height() + 4
+        max_lines = max(1, (panel.height - 34) // line_h)
+
+        total_lines = len(wrapped_lines)
+        max_scroll = max(0, total_lines - max_lines)
+        if self._code_scroll > max_scroll:
+            self._code_scroll = max_scroll
+
+        start_idx = self._code_scroll
+        end_idx = min(total_lines, start_idx + max_lines)
+
+        if highlight_index >= 0:
+            highlight_wrapped_idx = None
+            for i, (orig_idx, _) in enumerate(wrapped_lines):
+                if orig_idx == highlight_index:
+                    highlight_wrapped_idx = i
+                    break
+            if highlight_wrapped_idx is not None:
+                if highlight_wrapped_idx < start_idx:
+                    self._code_scroll = highlight_wrapped_idx
+                elif highlight_wrapped_idx >= end_idx:
+                    self._code_scroll = max(0, highlight_wrapped_idx - max_lines + 1)
+
+                start_idx = self._code_scroll
+                end_idx = min(total_lines, start_idx + max_lines)
+
+        highlight_map = self._algo_step_highlight.get(algo_name, {})
+        highlight_index = highlight_map.get(self._last_step_type or "", -1)
+
+        for _, (orig_idx, line) in enumerate(wrapped_lines[start_idx:end_idx], start=start_idx):
+            is_highlight = orig_idx == highlight_index
+            color = COLOR_TEXT
+            if is_highlight:
+                hl_rect = pygame.Rect(panel.x + 6, line_y - 1, panel.width - 12, line_h)
+                pygame.draw.rect(self.surface, (255, 230, 120), hl_rect, border_radius=4)
+                pygame.draw.rect(self.surface, (255, 255, 255), hl_rect, 1, border_radius=4)
+                color = (10, 12, 20)
+            text = self._font_code.render(line, True, color)
+            self.surface.blit(text, (panel.x + 10, line_y))
+            line_y += line_h
 
     def _draw_status(self) -> None:
         H = WINDOW_HEIGHT
