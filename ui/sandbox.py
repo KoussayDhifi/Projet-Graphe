@@ -13,7 +13,7 @@ from utils.constants import (
     ANIMATION_SPEED_DEFAULT, ANIMATION_SPEED_MIN, ANIMATION_SPEED_MAX,
 )
 from ui.draw import draw_graph, draw_status_bar, draw_tooltip
-from ui.widgets import Button, Slider, TextInput, Label,AlgorithmCodePanel
+from ui.widgets import Button, Slider, TextInput, Label, AlgorithmCodePanel, GraphExamplePanel
 
 if TYPE_CHECKING:
     from controller.app_controller import AppController
@@ -143,6 +143,19 @@ class SandboxScreen:
             btn._algo_name = name          # tag for lookup on click
             self._algo_buttons.append(btn)
 
+        # Code panel — sized to exactly cover the algorithm buttons area.
+        # Positioned flush over them so it feels like an in-place overlay.
+        algo_top    = 160                          # y of first algo button
+        algo_bottom = 160 + len(algo_names) * 36  # y below last button
+        panel_rect  = pygame.Rect(
+            W - SIDEBAR_WIDTH,                     # flush with sidebar left edge
+            algo_top,
+            SIDEBAR_WIDTH,                         # full sidebar width
+            algo_bottom - algo_top,
+        )
+        self._code_panel    = AlgorithmCodePanel(rect=panel_rect)
+        self._panel_visible = False                # only shown while executing
+        # Animation controls
         ctrl_y = H - 160
 
         self._code_panel = AlgorithmCodePanel(
@@ -241,6 +254,13 @@ class SandboxScreen:
             },
         }
 
+        # Example graph panel — floating over the canvas, top-left area
+        self._example_panel = GraphExamplePanel(
+            x=14,
+            y=TOPBAR_HEIGHT + 14,
+            on_select=self._load_preset,
+        )
+
     # ------------------------------------------------------------------
     # Event handling
     # ------------------------------------------------------------------
@@ -276,6 +296,7 @@ class SandboxScreen:
 
         if self._btn_play.handle_event(event):
             self.ctrl.animation_play()
+            self._panel_visible = True
         if self._btn_pause.handle_event(event):
             self.ctrl.animation_pause()
         if self._btn_step.handle_event(event):
@@ -288,6 +309,7 @@ class SandboxScreen:
             self.ctrl.animation_reset()
             self._last_step_type = None
             self._code_panel.clear_highlight()
+            self._panel_visible = False
         if self._btn_clear.handle_event(event):
             self.ctrl.clear_graph()
             self._current_algorithm = None
@@ -312,13 +334,22 @@ class SandboxScreen:
         self._slider_speed.handle_event(event)
         self.ctrl.set_animation_speed(self._slider_speed.value)
 
-        # Canvas mouse events
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            self._on_mouse_down(event)
-        if event.type == pygame.MOUSEBUTTONUP:
-            self._on_mouse_up(event)
-        if event.type == pygame.MOUSEMOTION:
-            self._on_mouse_move(event)
+        # Example panel (intercepts clicks before canvas)
+        preset_key = self._example_panel.handle_event(event)
+        if preset_key:
+            self._load_preset(preset_key)
+
+        # Canvas mouse events — skip if pointer is over the example panel
+        in_panel = self._example_panel.rect.collidepoint(
+            getattr(event, "pos", (-1, -1))
+        )
+        if not in_panel:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self._on_mouse_down(event)
+            if event.type == pygame.MOUSEBUTTONUP:
+                self._on_mouse_up(event)
+            if event.type == pygame.MOUSEMOTION:
+                self._on_mouse_move(event)
 
     def _on_mouse_down(self, event: pygame.event.Event) -> None:
         if not self._is_canvas_pos(event.pos):
@@ -407,6 +438,28 @@ class SandboxScreen:
         self._selected = None
 
     # ------------------------------------------------------------------
+    # Example graph loader
+    # ------------------------------------------------------------------
+
+    def _load_preset(self, key: str) -> None:
+        """Clear the canvas and populate it with the chosen preset graph."""
+        from utils.graph_presets import generate_preset
+        self.ctrl.clear_graph()
+        self._selected = None
+        self._panel_visible = False
+        # Centre in the visible canvas area
+        canvas_w = WINDOW_WIDTH - SIDEBAR_WIDTH
+        canvas_h = WINDOW_HEIGHT - TOPBAR_HEIGHT - 24
+        cx = canvas_w // 2 - self._offset[0]
+        cy = TOPBAR_HEIGHT + canvas_h // 2 - self._offset[1]
+        try:
+            generate_preset(key, self.ctrl.graph, cx, cy)
+            label = key.replace("_", " ").title()
+            self._status = f"Loaded preset: {label}"
+        except Exception as e:
+            self._set_error(str(e))
+
+    # ------------------------------------------------------------------
     # Algorithm runner
     # ------------------------------------------------------------------
 
@@ -451,11 +504,15 @@ class SandboxScreen:
                 self._status = f"Animating: {step.get('type', '?')}"
             self._status = f"Animating: {step.get('type', '?')}"
             self._code_panel.set_active_event(step["type"])
+        # Hide the panel once the engine has exhausted all steps
+        if self.ctrl.engine and self.ctrl.engine.is_finished and not self.ctrl.engine.is_playing:
+            self._panel_visible = False
 
     def draw(self) -> None:
         self.surface.fill(COLOR_BG)
         self._draw_canvas_bg()
         self._draw_graph()
+        self._example_panel.draw(self.surface)
         self._draw_sidebar()
         self._draw_topbar()
         self._draw_status()
@@ -515,11 +572,10 @@ class SandboxScreen:
         self._lbl_edges.draw(self.surface)
         self._lbl_type.draw(self.surface)
 
-        # Algorithm buttons
-        for btn in self._algo_buttons:
-            btn.active = getattr(btn, "_algo_name", None) == current
-        for btn in self._algo_buttons:
-            btn.draw(self.surface)
+        # Algorithm buttons (only shown when panel is hidden)
+        if not self._panel_visible:
+            for btn in self._algo_buttons:
+                btn.draw(self.surface)
 
         self._draw_algorithm_code(sb_rect)
 
@@ -529,6 +585,10 @@ class SandboxScreen:
         self._btn_step.draw(self.surface)
         self._btn_reset.draw(self.surface)
         self._code_panel.draw(surface=self.surface)
+
+        # Code panel — drawn last so it overlays the algorithm buttons
+        if self._panel_visible:
+            self._code_panel.draw(surface=self.surface)
 
         # Speed slider label
         spd_lbl = self._font_small.render("Step speed:", True, COLOR_TEXT_DIM)

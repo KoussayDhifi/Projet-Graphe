@@ -234,120 +234,108 @@ class TextInput:
 ALGO_PSEUDOCODE: dict[str, list[str]] = {
     "bfs": [
         "BFS(G, source):",
-        "  enqueue source",
-        "  mark source as visited",
-        "  while queue not empty:",
-        "    u = dequeue()",
-        "    for each neighbour v of u:",
-        "      if v not visited:",
-        "        mark v as visited",
-        "        enqueue v",
+        "  enfiler source",
+        "  marquer source comme visité",
+        "  tant que la file n'est pas vide :",
+        "    u = défiler()",
+        "    pour chaque voisin v de u :",
+        "      si v n'est pas visité :",
+        "        marquer v comme visité",
+        "        enfiler v",
     ],
     "dfs": [
         "DFS(G, source):",
-        "  push source onto stack",
-        "  while stack not empty:",
-        "    u = pop()",
-        "    if u not visited:",
-        "      mark u as visited",
-        "      for each neighbour v of u:",
-        "        push v onto stack",
+        "  empiler source",
+        "  tant que la pile n'est pas vide :",
+        "    u = dépiler()",
+        "    si u n'est pas visité :",
+        "      marquer u comme visité",
+        "      pour chaque voisin v de u :",
+        "        empiler v",
     ],
     "dijkstra": [
         "Dijkstra(G, source):",
         "  dist[source] = 0",
-        "  for all other nodes: dist = ∞",
-        "  add all nodes to priority queue",
-        "  while queue not empty:",
-        "    u = extract_min(queue)",
-        "    for each neighbour v of u:",
-        "      alt = dist[u] + weight(u, v)",
-        "      if alt < dist[v]:",
+        "  pour tous les autres nœuds : dist = ∞",
+        "  ajouter tous les nœuds à la file de priorité",
+        "  tant que la file n'est pas vide :",
+        "    u = extraire_min(file)",
+        "    pour chaque voisin v de u :",
+        "      alt = dist[u] + poids(u, v)",
+        "      si alt < dist[v] :",
         "        dist[v] = alt",
-        "        prev[v] = u",
+        "        prec[v] = u",
+    ],
+    "bellman": [
+        "Bellman(G, source):",
+        "  effectuer un tri topologique de G",
+        "  dist[source] = 0",
+        "  pour tous les autres nœuds : dist = ∞",
+        "  pour chaque nœud u dans l'ordre topologique :",
+        "    pour chaque voisin v de u :",
+        "      si dist[u] + poids(u, v) < dist[v] :",
+        "        dist[v] = dist[u] + poids(u, v)",
+        "        prec[v] = u",
     ],
     "bellman_ford": [
         "BellmanFord(G, source):",
         "  dist[source] = 0",
-        "  for all other nodes: dist = ∞",
-        "  repeat |V| - 1 times:",
-        "    for each edge (u, v, w):",
-        "      if dist[u] + w < dist[v]:",
+        "  pour tous les autres nœuds : dist = ∞",
+        "  répéter |V| - 1 fois :",
+        "    pour chaque arête (u, v, w) :",
+        "      si dist[u] + w < dist[v] :",
         "        dist[v] = dist[u] + w",
-        "  for each edge (u, v, w):",
-        "    if dist[u] + w < dist[v]:",
-        "      report negative cycle",
+        "  pour chaque arête (u, v, w) :",
+        "    si dist[u] + w < dist[v] :",
+        "      signaler un cycle de poids négatif",
     ],
     "kruskal": [
         "Kruskal(G):",
-        "  A := empty set",
-        "  for each vertex v of G:",
+        "  A := ensemble vide",
+        "  pour chaque sommet v de G :",
         "    creerEnsemble(v)",
-        "  sort edges by weight ascending",
-        "  for each edge (u, v) by weight:",
-        "    if find(u) != find(v):",
-        "      add edge (u, v) to A",
+        "  trier les arêtes par poids croissant",
+        "  pour chaque arête (u, v) par poids :",
+        "    si trouver(u) != trouver(v) :",
+        "      ajouter l'arête (u, v) à A",
         "      union(u, v)",
     ],
     "prim": [
         "Prim(G, source):",
-        "  key[source] = 0",
-        "  for all other nodes: key = ∞",
-        "  add all nodes to priority queue",
-        "  while queue not empty:",
-        "    u = extract_min(queue)",
-        "    for each neighbour v of u:",
-        "      if v in queue and w(u,v) < key[v]:",
+        "  cle[source] = 0",
+        "  pour tous les autres nœuds : cle = ∞",
+        "  ajouter tous les nœuds à la file de priorité",
+        "  tant que la file n'est pas vide :",
+        "    u = extraire_min(file)",
+        "    pour chaque voisin v de u :",
+        "      si v est dans la file et poids(u, v) < cle[v] :",
         "        parent[v] = u",
-        "        key[v] = w(u, v)",
+        "        cle[v] = poids(u, v)",
     ],
     "connected": [
-        "Connected(G):",
-        "  component_id = 0",
-        "  for each unvisited node u:",
-        "    start BFS/DFS from u",
-        "    label all reached nodes",
-        "    with component_id",
-        "    component_id += 1",
+        "ComposantesConnexes(G):",
+        "  id_composante = 0",
+        "  pour chaque nœud u non visité :",
+        "    lancer BFS/DFS depuis u",
+        "    marquer tous les nœuds atteints",
+        "    avec id_composante",
+        "    id_composante += 1",
     ],
     "scc": [
-        "SCC / Kosaraju(G):",
-        "  run DFS on G, record finish order",
-        "  build reversed graph G_r",
-        "  run DFS on G_r in reverse",
-        "    finish order",
-        "  each DFS tree = one SCC",
+        "CFC / Kosaraju(G):",
+        "  exécuter DFS sur G, noter l'ordre de fin",
+        "  construire le graphe inversé G_r",
+        "  exécuter DFS sur G_r dans l'ordre inverse de fin",
+        "  chaque arbre DFS = une CFC (Composante Fortement Connexe)",
     ],
     "welsh_powell": [
         "WelshPowell(G):",
-        "  sort nodes by degree descending",
-        "  color_map = {}",
-        "  for each node u (sorted):",
-        "    nbr_colors = colors of neighbours",
-        "    color = smallest int not in",
-        "      nbr_colors",
-        "    color_map[u] = color",
-    ],
-    "eulerian": [
-        "Eulerian(G, source):",
-        "  check Euler conditions:",
-        "    if all degrees even:",
-        "      → Eulerian circuit",
-        "    if exactly 2 odd degrees:",
-        "      → Eulerian path",
-        "    else: no Eulerian path",
-        "  Hierholzer:",
-        "  stack = [start_node]",
-        "  path = []",
-        "  while stack not empty:",
-        "    u = peek(stack)",
-        "    if u has unused edges:",
-        "      v = next neighbour of u",
-        "      remove edge (u, v)",
-        "      push v onto stack",
-        "    else:",
-        "      path.prepend(pop(stack))",
-        "  return path",
+        "  trier les nœuds par degré décroissant",
+        "  map_couleurs = {}",
+        "  pour chaque nœud u (trié) :",
+        "    couleurs_voisins = couleurs des voisins de u",
+        "    couleur = plus petit entier absent de couleurs_voisins",
+        "    map_couleurs[u] = couleur",
     ],
 }
 
@@ -450,14 +438,14 @@ class AlgorithmCodePanel:
     _HEADER_H      = 24          # height of the "Algorithm code" header
     _BORDER_RADIUS = 8
 
-    # Colours  (dark-theme, matching the app palette)
-    _COL_BG        = (12,  18,  35)    # panel background
-    _COL_BORDER    = (50,  90, 160)    # border — cyan-blue
-    _COL_HEADER    = (180, 200, 230)   # header text
-    _COL_LINE      = (160, 180, 210)   # normal line text
-    _COL_HIGHLIGHT = (30,  60, 110)    # active-line background
-    _COL_HL_TEXT   = (255, 255, 255)   # active-line text
-    _COL_LINENO    = (70,  90, 130)    # line-number gutter
+    # Colours  (light-theme, matching the vibrant app palette)
+    _COL_BG        = (255, 255, 255)   # Clean white panel background
+    _COL_BORDER    = (190, 210, 235)   # Soft cyan-blue border (keeps the cool-toned framing)
+    _COL_HEADER    = (40,  45,  55)    # Dark slate for sharp, readable headers
+    _COL_LINE      = (80,  90,  105)   # Medium-dark text for standard lines to reduce eye strain
+    _COL_HIGHLIGHT = (235, 195, 65)  # Pale, vibrant blue for the active line background
+    _COL_HL_TEXT   = (220,   220, 220)   # Deep, punchy blue for active line text (high contrast)
+    _COL_LINENO    = (170, 180, 195)   # Muted gray-blue for the gutter so it recedes visually
 
     def __init__(self, rect: pygame.Rect) -> None:
         self.rect          = rect
@@ -465,11 +453,6 @@ class AlgorithmCodePanel:
         self._lines        : list[str]        = []
         self._active_line  : int | None       = None
         self._event_map    : dict[str, int]   = {}
-
-        # --- Dragging State ---
-        self.dragging = False
-        self.offset_x = 0
-        self.offset_y = 0
 
         self._font_header = _load_font(13, bold=True)
         self._font_code   = _load_font(12)          # monospace fallback via dejavusans
@@ -590,3 +573,120 @@ class AlgorithmCodePanel:
             # Code text
             code_surf = self._font_code.render(line, True, text_col)
             surface.blit(code_surf, (x0 + 22, ly))
+
+
+# ============================================================
+# Graph example presets panel
+# ============================================================
+
+# Each preset: (display_label, internal_key, description)
+GRAPH_PRESETS = [
+    ("★ Complete K5",   "complete_k5",   "5 nodes, every pair connected"),
+    ("⬡ Petersen",      "petersen",      "Classic 10-node non-planar graph"),
+    ("⊙ Star S7",       "star_s7",       "Hub node connected to 7 leaves"),
+    ("⬤ Cycle C8",      "cycle_c8",      "8-node ring / cycle"),
+    ("▦ Grid 3×3",      "grid_3x3",      "9-node lattice graph"),
+    ("▲ Bin. Tree",     "bin_tree",       "15-node complete binary tree"),
+    ("⬛ Bipartite",    "bipartite",     "K₃,₄ — two groups, all cross-edges"),
+    ("〜 Path P8",      "path_p8",       "8 nodes in a straight chain"),
+]
+
+
+class GraphExamplePanel:
+    """
+    A floating panel drawn on the canvas with preset graph buttons.
+
+    Clicking a button fires the callback ``on_select(key: str)`` where
+    *key* is one of the internal keys from ``GRAPH_PRESETS``.
+
+    Parameters
+    ----------
+    x, y      : top-left position on screen
+    on_select : callable(key) invoked when the user picks a preset
+    """
+
+    _BG         = (255, 255, 255, 230)  # Frosted white, semi-transparent
+    _BORDER     = (190, 210, 235)       # Soft cyan-blue to match your other panels
+    _TITLE_COL  = (40,  45,  55)        # Dark slate for sharp, readable titles
+    _DESC_COL   = (110, 120, 135)       # Muted gray-blue for descriptions
+
+    _BTN_W  = 150
+    _BTN_H  = 28
+    _PAD    = 10
+    _GAP    = 6
+    _TITLE_H = 26
+
+    def __init__(self, x: int, y: int, on_select) -> None:
+        self._on_select = on_select
+        self._buttons: list[tuple[Button, str, str]] = []  # (btn, key, desc)
+        self._font_title = _load_font(13, bold=True)
+        self._font_desc  = _load_font(11)
+        self._hovered_desc = ""
+
+        total_h = (
+            self._TITLE_H
+            + self._PAD
+            + len(GRAPH_PRESETS) * (self._BTN_H + self._GAP)
+            + self._PAD
+            + 20   # desc line
+            + self._PAD
+        )
+        self.rect = pygame.Rect(x, y, self._BTN_W + self._PAD * 2, total_h)
+
+        btn_x = x + self._PAD
+        btn_y = y + self._TITLE_H + self._PAD
+        for label, key, desc in GRAPH_PRESETS:
+            btn = Button(
+                rect=pygame.Rect(btn_x, btn_y, self._BTN_W, self._BTN_H),
+                label=label,
+                font_size=12,
+                color=(30, 50, 100),
+                text_color=(210, 225, 255),
+                border_radius=5,
+            )
+            self._buttons.append((btn, key, desc))
+            btn_y += self._BTN_H + self._GAP
+
+        self._desc_y = btn_y + self._PAD
+
+    def handle_event(self, event: pygame.event.Event) -> str | None:
+        """Return the preset key that was clicked, or None."""
+        self._hovered_desc = ""
+        for btn, key, desc in self._buttons:
+            if event.type == pygame.MOUSEMOTION and btn.rect.collidepoint(event.pos):
+                self._hovered_desc = desc
+            if btn.handle_event(event):
+                return key
+        return None
+
+    def draw(self, surface: pygame.Surface) -> None:
+        r = self.rect
+
+        # Semi-transparent background
+        bg_surf = pygame.Surface(r.size, pygame.SRCALPHA)
+        pygame.draw.rect(bg_surf, self._BG,
+                         bg_surf.get_rect(), border_radius=10)
+        surface.blit(bg_surf, r.topleft)
+        pygame.draw.rect(surface, self._BORDER, r, 2, border_radius=10)
+
+        # Title
+        title = self._font_title.render("Example Graphs", True, self._TITLE_COL)
+        surface.blit(title, (r.x + self._PAD, r.y + 6))
+
+        # Thin separator
+        pygame.draw.line(
+            surface, self._BORDER,
+            (r.x + self._PAD,           r.y + self._TITLE_H - 2),
+            (r.x + r.width - self._PAD, r.y + self._TITLE_H - 2), 1,
+        )
+
+        # Buttons
+        for btn, key, desc in self._buttons:
+            btn.draw(surface)
+
+        # Hovered description
+        if self._hovered_desc:
+            desc_surf = self._font_desc.render(
+                self._hovered_desc, True, self._DESC_COL
+            )
+            surface.blit(desc_surf, (r.x + self._PAD, self._desc_y))
