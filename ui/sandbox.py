@@ -106,12 +106,40 @@ class SandboxScreen:
         # Algorithm buttons (one per registered algorithm)
         self._algo_buttons: list[Button] = []
         algo_names = list_algorithms()
+        is_directed = self.ctrl.graph.directed
+        is_weighted = self.ctrl.graph.weighted
+
         for i, name in enumerate(algo_names):
+            # Determine if the algorithm should be enabled based on graph properties
+            enabled = True
+            if not is_weighted:
+                # If unweighted, don't show (disable) Bellman-Ford, Dijkstra, Kruskal, Prim
+                if name in ("dijkstra", "bellman_ford", "kruskal", "prim"):
+                    enabled = False
+            elif not is_directed:
+                # If weighted and undirected, don't show (disable) Bellman-Ford, Dijkstra
+                if name in ("dijkstra", "bellman_ford"):
+                    enabled = False
+
+            # Label mapping for specific algorithms
+            label = name.replace("_", " ").title()
+            if name == "scc":
+                label = "CFC"
+            elif name == "connected":
+                label = "CC"
+            elif name == "dfs":
+                label = "DFS"
+            elif name == "bfs":
+                label = "BFS"
+            elif name == "bellman_ford":
+                label = "Bellman-Ford"
+
             btn = Button(
                 rect=pygame.Rect(sx, 160 + i * 36, bw, 30),
-                label=name.replace("_", " ").title(),
+                label=label,
                 font_size=13,
             )
+            btn.enabled = enabled
             btn._algo_name = name          # tag for lookup on click
             self._algo_buttons.append(btn)
 
