@@ -419,23 +419,22 @@ class SandboxScreen:
         if source is None and self.ctrl.graph.node_count() > 0:
             # Default to first node
             source = next(iter(self.ctrl.graph.nodes))
-        try:
-            self.ctrl.run_algorithm(name, source)
-            self._current_algorithm = name
-            self._last_step_type = None
-            self._code_scroll = 0
-            self._status = f"Running {name} from node {source}"
-            self.ctrl.animation_play()
-            # Load pseudocode for the selected algorithm and reset highlight
-            self._code_panel.set_algorithm(name)
-            self._code_panel.clear_highlight()
-        except NotImplementedError:
-            self._set_error(f"{name} is not implemented yet.")
-        except Exception as e:
-            if name == "eulerian":
-                self._alert_msg = str(e)
+        
+        # Get destination as the last node (for algorithms that support it)
+        destination = None
+        if self.ctrl.graph.node_count() > 0:
+            destination = max(self.ctrl.graph.nodes.keys())  # Last node ID
+        
+        #try:
+            self.ctrl.run_algorithm(name, source, destination)
+            if destination is not None and destination != source:
+                self._status = f"Running {name} from node {source} to {destination}"
             else:
-                self._set_error(str(e))
+                self._status = f"Running {name} from node {source}"
+        #except NotImplementedError:
+            #self._set_error(f"{name} is not implemented yet.")
+        #except Exception as e:
+            #self._set_error(str(e))
 
     # ------------------------------------------------------------------
     # Update / Draw
