@@ -10,6 +10,9 @@ if TYPE_CHECKING:
     from core.graph import Graph
 
 
+from animation.events import make_step, VISIT_NODE, PROCESS_NODE, TRAVERSE_EDGE, REJECT_EDGE
+from collections import deque
+
 def bfs(graph: "Graph", source: int) -> List[Dict]:
     """
     Breadth-First Search with animation steps.

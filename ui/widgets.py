@@ -58,10 +58,30 @@ class Button:
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Return True if the button was clicked."""
+        # Update hover state
+        if event.type == pygame.MOUSEMOTION:
+            was_hovered = self.hovered
+            self.hovered = self.rect.collidepoint(event.pos)
+            
+            # If mouse is over the button, update system cursor
+            if self.hovered:
+                if not self.enabled:
+                    try:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_NO)
+                    except AttributeError: pass # older pygame
+                else:
+                    try:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+                    except AttributeError: pass
+            elif was_hovered:
+                # Reset to default when leaving the button area
+                try:
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                except AttributeError: pass
+
         if not self.enabled:
             return False
-        if event.type == pygame.MOUSEMOTION:
-            self.hovered = self.rect.collidepoint(event.pos)
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.rect.collidepoint(event.pos):
                 return True
@@ -234,120 +254,102 @@ class TextInput:
 ALGO_PSEUDOCODE: dict[str, list[str]] = {
     "bfs": [
         "BFS(G, source):",
-        "  enqueue source",
-        "  mark source as visited",
-        "  while queue not empty:",
-        "    u = dequeue()",
-        "    for each neighbour v of u:",
-        "      if v not visited:",
-        "        mark v as visited",
-        "        enqueue v",
+        "  enfiler source",
+        "  marquer source visité",
+        "  tant que file non vide :",
+        "    u = défiler(file)",
+        "    pour chaque voisin v de u :",
+        "      si v non visité :",
+        "        marquer v visité",
+        "        enfiler v",
     ],
     "dfs": [
         "DFS(G, source):",
-        "  push source onto stack",
-        "  while stack not empty:",
-        "    u = pop()",
-        "    if u not visited:",
-        "      mark u as visited",
-        "      for each neighbour v of u:",
-        "        push v onto stack",
+        "  empiler source",
+        "  tant que pile non vide :",
+        "    u = dépiler(pile)",
+        "    si u non visité :",
+        "      marquer u visité",
+        "      pour chaque voisin v de u :",
+        "        si v non visité :",
+        "          empiler v",
     ],
     "dijkstra": [
         "Dijkstra(G, source):",
         "  dist[source] = 0",
-        "  for all other nodes: dist = ∞",
-        "  add all nodes to priority queue",
-        "  while queue not empty:",
-        "    u = extract_min(queue)",
-        "    for each neighbour v of u:",
-        "      alt = dist[u] + weight(u, v)",
-        "      if alt < dist[v]:",
-        "        dist[v] = alt",
-        "        prev[v] = u",
+        "  tant que file non vide :",
+        "    u = extraire_min(file)",
+        "    pour chaque voisin v de u :",
+        "      si dist[u] + w < dist[v] :",
+        "        dist[v] = dist[u] + w",
+        "        prec[v] = u",
     ],
     "bellman_ford": [
         "BellmanFord(G, source):",
         "  dist[source] = 0",
-        "  for all other nodes: dist = ∞",
-        "  repeat |V| - 1 times:",
-        "    for each edge (u, v, w):",
-        "      if dist[u] + w < dist[v]:",
+        "  répéter |V|-1 fois :",
+        "    pour chaque arête (u, v, w) :",
+        "      si dist[u] + w < dist[v] :",
         "        dist[v] = dist[u] + w",
-        "  for each edge (u, v, w):",
-        "    if dist[u] + w < dist[v]:",
-        "      report negative cycle",
+        "  pour chaque arête (u, v, w) :",
+        "    si dist[u] + w < dist[v] :",
+        "      erreur 'Cycle négatif'",
     ],
     "kruskal": [
         "Kruskal(G):",
-        "  A := empty set",
-        "  for each vertex v of G:",
-        "    creerEnsemble(v)",
-        "  sort edges by weight ascending",
-        "  for each edge (u, v) by weight:",
-        "    if find(u) != find(v):",
-        "      add edge (u, v) to A",
+        "  trier arêtes par poids",
+        "  pour chaque arête (u, v, w) :",
+        "    si trouve(u) != trouve(v) :",
+        "      ajouter (u, v) à MST",
         "      union(u, v)",
     ],
     "prim": [
         "Prim(G, source):",
-        "  key[source] = 0",
-        "  for all other nodes: key = ∞",
-        "  add all nodes to priority queue",
-        "  while queue not empty:",
-        "    u = extract_min(queue)",
-        "    for each neighbour v of u:",
-        "      if v in queue and w(u,v) < key[v]:",
-        "        parent[v] = u",
-        "        key[v] = w(u, v)",
+        "  visiter source",
+        "  ajouter arêtes de source au tas",
+        "  tant que tas non vide :",
+        "    (u, v) = extraire_min(tas)",
+        "    si v non visité :",
+        "      ajouter (u, v) à MST",
+        "      visiter v",
+        "      ajouter arêtes de v au tas",
     ],
     "connected": [
-        "Connected(G):",
-        "  component_id = 0",
-        "  for each unvisited node u:",
-        "    start BFS/DFS from u",
-        "    label all reached nodes",
-        "    with component_id",
-        "    component_id += 1",
+        "ComposantesConnexes(G):",
+        "  pour chaque nœud u de G :",
+        "    si u non visité :",
+        "      nouvelle composante",
+        "      BFS/DFS depuis u",
+        "      marquer nœuds atteints",
     ],
     "scc": [
-        "SCC / Kosaraju(G):",
-        "  run DFS on G, record finish order",
-        "  build reversed graph G_r",
-        "  run DFS on G_r in reverse",
-        "    finish order",
-        "  each DFS tree = one SCC",
+        "Tarjan(G):",
+        "  strongconnect(u):",
+        "    u.index = u.lowlink = i++",
+        "    pour chaque voisin v de u :",
+        "      si v non visité :",
+        "        strongconnect(v)",
+        "        u.lowlink = min(u.lowlink, v.lowlink)",
+        "      sinon si v sur pile :",
+        "        u.lowlink = min(u.lowlink, v.index)",
+        "    si u.lowlink == u.index : nouvelle CFC",
     ],
     "welsh_powell": [
         "WelshPowell(G):",
-        "  sort nodes by degree descending",
-        "  color_map = {}",
-        "  for each node u (sorted):",
-        "    nbr_colors = colors of neighbours",
-        "    color = smallest int not in",
-        "      nbr_colors",
-        "    color_map[u] = color",
+        "  trier nœuds par degré décroissant",
+        "  pour chaque nœud u trié :",
+        "    c = plus petite couleur libre",
+        "    colorier u avec c",
     ],
     "eulerian": [
-        "Eulerian(G, source):",
-        "  check Euler conditions:",
-        "    if all degrees even:",
-        "      → Eulerian circuit",
-        "    if exactly 2 odd degrees:",
-        "      → Eulerian path",
-        "    else: no Eulerian path",
-        "  Hierholzer:",
-        "  stack = [start_node]",
-        "  path = []",
-        "  while stack not empty:",
-        "    u = peek(stack)",
-        "    if u has unused edges:",
-        "      v = next neighbour of u",
-        "      remove edge (u, v)",
-        "      push v onto stack",
-        "    else:",
-        "      path.prepend(pop(stack))",
-        "  return path",
+        "Hierholzer(G):",
+        "  vérifier degrés (Th. Euler)",
+        "  choisir départ u",
+        "  tant que pile non vide :",
+        "    si u a des voisins :",
+        "      empiler u, u = voisin",
+        "      supprimer arête parcourue",
+        "    sinon : ajouter u au circuit",
     ],
 }
 
@@ -356,63 +358,65 @@ ALGO_PSEUDOCODE: dict[str, list[str]] = {
 # Format:  algo_name -> { event_type -> line_index }
 ALGO_EVENT_LINE: dict[str, dict[str, int]] = {
     "bfs": {
-        "visit_node":    1,
-        "traverse_edge": 6,
+        "visit_node":    2,
         "process_node":  4,
         "explore_edge":  5,
-        "reject_edge":   5,
+        "traverse_edge": 8,
+        "reject_edge":   6,
     },
     "dfs": {
         "visit_node":    5,
-        "traverse_edge": 6,
-        "process_node":  4,
+        "process_node":  5,
         "explore_edge":  6,
-        "reject_edge":   6,
+        "traverse_edge": 8,
+        "reject_edge":   7,
     },
     "dijkstra": {
-        "visit_node":   5,
-        "explore_edge": 6,
-        "relax_edge":   7,
-        "reject_edge":  7,
-        "final_path":   10,
-    },
-    "bellman_ford": {
         "visit_node":   3,
         "explore_edge": 4,
-        "relax_edge":   5,
+        "relax_edge":   6,
         "reject_edge":  5,
-        "final_path":   9,
+        "final_path":   7,
+    },
+    "bellman_ford": {
+        "visit_node":   1,
+        "explore_edge": 3,
+        "relax_edge":   5,
+        "reject_edge":  4,
     },
     "kruskal": {
-        "visit_node":    2,
-        "explore_edge":  5,
-        "select_edge":   7,
-        "discard_edge":  5,
-        "final_tree":    8,
+        "code_sort":     1,
+        "explore_edge":  2,
+        "select_edge":   4,
+        "discard_edge":  3,
+        "final_tree":    5,
     },
     "prim": {
-        "visit_node":   4,
-        "explore_edge": 6,
-        "relax_edge":   7,
-        "select_edge":  7,
-        "reject_edge":  6,
-        "final_tree":   8,
+        "visit_node":    1,
+        "explore_edge":  2,
+        "select_edge":   6,
+        "reject_edge":   5,
+        "final_tree":    7,
     },
     "connected": {
-        "visit_node":        3,
-        "new_component":     2,
-        "add_to_component":  4,
-        "explore_edge":      3,
+        "new_component":     3,
+        "visit_node":        4,
+        "add_to_component":  5,
     },
     "scc": {
-        "visit_node":        1,
-        "new_component":     5,
-        "add_to_component":  5,
-        "explore_edge":      1,
+        "visit_node":        2,
+        "traverse_edge":     4,
+        "new_component":     9,
+        "add_to_component":  9,
     },
     "welsh_powell": {
-        "visit_node":  3,
-        "color_node":  6,
+        "visit_node":  2,
+        "color_node":  4,
+    },
+    "eulerian": {
+        "visit_node":    5,
+        "traverse_edge": 5,
+        "final_path":    7,
     },
 }
 
@@ -450,14 +454,14 @@ class AlgorithmCodePanel:
     _HEADER_H      = 24          # height of the "Algorithm code" header
     _BORDER_RADIUS = 8
 
-    # Colours  (dark-theme, matching the app palette)
-    _COL_BG        = (12,  18,  35)    # panel background
-    _COL_BORDER    = (50,  90, 160)    # border — cyan-blue
-    _COL_HEADER    = (180, 200, 230)   # header text
-    _COL_LINE      = (160, 180, 210)   # normal line text
-    _COL_HIGHLIGHT = (30,  60, 110)    # active-line background
-    _COL_HL_TEXT   = (255, 255, 255)   # active-line text
-    _COL_LINENO    = (70,  90, 130)    # line-number gutter
+    # Colours  (light-theme, matching the vibrant app palette)
+    _COL_BG        = (255, 255, 255)   # Clean white panel background
+    _COL_BORDER    = (190, 210, 235)   # Soft cyan-blue border (keeps the cool-toned framing)
+    _COL_HEADER    = (40,  45,  55)    # Dark slate for sharp, readable headers
+    _COL_LINE      = (80,  90,  105)   # Medium-dark text for standard lines to reduce eye strain
+    _COL_HIGHLIGHT = (235, 195, 65)  # Pale, vibrant blue for the active line background
+    _COL_HL_TEXT   = (220,   220, 220)   # Deep, punchy blue for active line text (high contrast)
+    _COL_LINENO    = (170, 180, 195)   # Muted gray-blue for the gutter so it recedes visually
 
     def __init__(self, rect: pygame.Rect) -> None:
         self.rect          = rect
@@ -465,11 +469,7 @@ class AlgorithmCodePanel:
         self._lines        : list[str]        = []
         self._active_line  : int | None       = None
         self._event_map    : dict[str, int]   = {}
-
-        # --- Dragging State ---
-        self.dragging = False
-        self.offset_x = 0
-        self.offset_y = 0
+        self._scroll_y     = 0
 
         self._font_header = _load_font(13, bold=True)
         self._font_code   = _load_font(12)          # monospace fallback via dejavusans
@@ -484,32 +484,18 @@ class AlgorithmCodePanel:
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """
-        Processes mouse events for dragging the panel.
-        Call this in your main event loop: self.code_panel.handle_event(event)
+        Handle mouse wheel for scrolling the pseudocode.
         """
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Left click
-                if self.rect.collidepoint(event.pos):
-                    self.dragging = True
-                    # Calculate where inside the panel we clicked
-                    mouse_x, mouse_y = event.pos
-                    self.offset_x = self.rect.x - mouse_x
-                    self.offset_y = self.rect.y - mouse_y
-                    
-                    # Change cursor to 'hand' or 'move'
-                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_SIZEALL)
+        if event.type == pygame.MOUSEWHEEL:
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
+                self._scroll_y -= event.y * self._LINE_HEIGHT
+                self._clamp_scroll()
 
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                self.dragging = False
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-
-        elif event.type == pygame.MOUSEMOTION:
-            if self.dragging:
-                mouse_x, mouse_y = event.pos
-                # Update position based on mouse + original offset
-                self.rect.x = mouse_x + self.offset_x
-                self.rect.y = mouse_y + self.offset_y
+    def _clamp_scroll(self) -> None:
+        max_h = len(self._lines) * self._LINE_HEIGHT
+        view_h = self.rect.height - self._HEADER_H - self._PADDING * 2
+        max_scroll = max(0, max_h - view_h)
+        self._scroll_y = max(0, min(self._scroll_y, max_scroll))
 
     def set_algorithm(self, name: str) -> None:
         """
@@ -521,11 +507,21 @@ class AlgorithmCodePanel:
         self._lines       = ALGO_PSEUDOCODE.get(key, [f"# {name}", "  (no pseudocode)"])
         self._event_map   = ALGO_EVENT_LINE.get(key, {})
         self._active_line = None
+        self._scroll_y    = 0
 
     def set_active_event(self, event_type: str) -> None:
-        """Highlight the line associated with *event_type*."""
+        """Highlight the line associated with *event_type* and auto-scroll if needed."""
         if event_type in self._event_map:
             self._active_line = self._event_map[event_type]
+            # Auto-scroll to show the active line
+            if self._active_line is not None:
+                line_y = self._active_line * self._LINE_HEIGHT
+                view_h = self.rect.height - self._HEADER_H - self._PADDING * 2
+                if line_y < self._scroll_y:
+                    self._scroll_y = line_y
+                elif line_y + self._LINE_HEIGHT > self._scroll_y + view_h:
+                    self._scroll_y = line_y - view_h + self._LINE_HEIGHT
+                self._clamp_scroll()
 
     def clear_highlight(self) -> None:
         self._active_line = None
@@ -563,30 +559,159 @@ class AlgorithmCodePanel:
             (r.x + r.width - self._PADDING, y0 - 4), 1
         )
 
-        # --- Pseudocode lines ---
-        max_lines = (r.height - self._HEADER_H - self._PADDING * 2) // self._LINE_HEIGHT
-
-        for i, line in enumerate(self._lines[:max_lines]):
-            ly = y0 + i * self._LINE_HEIGHT
+        # --- Pseudocode lines (with clipping) ---
+        code_view_rect = pygame.Rect(
+            r.x + 2, y0,
+            r.width - 4, r.height - self._HEADER_H - self._PADDING * 2
+        )
+        
+        # Create a sub-surface for the code to handle clipping/scrolling easily
+        code_surf = pygame.Surface(code_view_rect.size, pygame.SRCALPHA)
+        
+        for i, line in enumerate(self._lines):
+            ly = i * self._LINE_HEIGHT - self._scroll_y
+            
+            # Skip lines outside the view
+            if ly + self._LINE_HEIGHT < 0 or ly > code_view_rect.height:
+                continue
 
             if i == self._active_line:
                 # Highlight background
                 hl_rect = pygame.Rect(
-                    r.x + 2, ly - 2,
-                    r.width - 4, self._LINE_HEIGHT + 1
+                    0, ly - 2,
+                    code_view_rect.width, self._LINE_HEIGHT + 1
                 )
-                pygame.draw.rect(surface, self._COL_HIGHLIGHT, hl_rect)
+                pygame.draw.rect(code_surf, self._COL_HIGHLIGHT, hl_rect)
                 # Arrow indicator on the left
                 arrow_surf = self._font_code.render("▶", True, COLOR_ACCENT)
-                surface.blit(arrow_surf, (r.x + 3, ly))
+                code_surf.blit(arrow_surf, (1, ly))
                 text_col = self._COL_HL_TEXT
             else:
                 text_col = self._COL_LINE
 
             # Line number gutter
             lineno_surf = self._font_code.render(f"{i + 1:2d}", True, self._COL_LINENO)
-            surface.blit(lineno_surf, (x0, ly))
+            code_surf.blit(lineno_surf, (8, ly))
 
             # Code text
-            code_surf = self._font_code.render(line, True, text_col)
-            surface.blit(code_surf, (x0 + 22, ly))
+            code_txt_surf = self._font_code.render(line, True, text_col)
+            code_surf.blit(code_txt_surf, (30, ly))
+
+        surface.blit(code_surf, code_view_rect.topleft)
+
+
+# ============================================================
+# Graph example presets panel
+# ============================================================
+
+# Each preset: (display_label, internal_key, description)
+GRAPH_PRESETS = [
+    ("★ Complete K5",   "complete_k5",   "5 nodes, every pair connected"),
+    ("⬡ Petersen",      "petersen",      "Classic 10-node non-planar graph"),
+    ("⊙ Star S7",       "star_s7",       "Hub node connected to 7 leaves"),
+    ("⬤ Cycle C8",      "cycle_c8",      "8-node ring / cycle"),
+    ("▦ Grid 3×3",      "grid_3x3",      "9-node lattice graph"),
+    ("▲ Bin. Tree",     "bin_tree",       "15-node complete binary tree"),
+    ("⬛ Bipartite",    "bipartite",     "K₃,₄ — two groups, all cross-edges"),
+    ("〜 Path P8",      "path_p8",       "8 nodes in a straight chain"),
+]
+
+
+class GraphExamplePanel:
+    """
+    A floating panel drawn on the canvas with preset graph buttons.
+
+    Clicking a button fires the callback ``on_select(key: str)`` where
+    *key* is one of the internal keys from ``GRAPH_PRESETS``.
+
+    Parameters
+    ----------
+    x, y      : top-left position on screen
+    on_select : callable(key) invoked when the user picks a preset
+    """
+
+    _BG         = (255, 255, 255, 230)  # Frosted white, semi-transparent
+    _BORDER     = (190, 210, 235)       # Soft cyan-blue to match your other panels
+    _TITLE_COL  = (40,  45,  55)        # Dark slate for sharp, readable titles
+    _DESC_COL   = (110, 120, 135)       # Muted gray-blue for descriptions
+
+    _BTN_W  = 150
+    _BTN_H  = 28
+    _PAD    = 10
+    _GAP    = 6
+    _TITLE_H = 26
+
+    def __init__(self, x: int, y: int, on_select) -> None:
+        self._on_select = on_select
+        self._buttons: list[tuple[Button, str, str]] = []  # (btn, key, desc)
+        self._font_title = _load_font(13, bold=True)
+        self._font_desc  = _load_font(11)
+        self._hovered_desc = ""
+
+        total_h = (
+            self._TITLE_H
+            + self._PAD
+            + len(GRAPH_PRESETS) * (self._BTN_H + self._GAP)
+            + self._PAD
+            + 20   # desc line
+            + self._PAD
+        )
+        self.rect = pygame.Rect(x, y, self._BTN_W + self._PAD * 2, total_h)
+
+        btn_x = x + self._PAD
+        btn_y = y + self._TITLE_H + self._PAD
+        for label, key, desc in GRAPH_PRESETS:
+            btn = Button(
+                rect=pygame.Rect(btn_x, btn_y, self._BTN_W, self._BTN_H),
+                label=label,
+                font_size=12,
+                color=(30, 50, 100),
+                text_color=(210, 225, 255),
+                border_radius=5,
+            )
+            self._buttons.append((btn, key, desc))
+            btn_y += self._BTN_H + self._GAP
+
+        self._desc_y = btn_y + self._PAD
+
+    def handle_event(self, event: pygame.event.Event) -> str | None:
+        """Return the preset key that was clicked, or None."""
+        self._hovered_desc = ""
+        for btn, key, desc in self._buttons:
+            if event.type == pygame.MOUSEMOTION and btn.rect.collidepoint(event.pos):
+                self._hovered_desc = desc
+            if btn.handle_event(event):
+                return key
+        return None
+
+    def draw(self, surface: pygame.Surface) -> None:
+        r = self.rect
+
+        # Semi-transparent background
+        bg_surf = pygame.Surface(r.size, pygame.SRCALPHA)
+        pygame.draw.rect(bg_surf, self._BG,
+                         bg_surf.get_rect(), border_radius=10)
+        surface.blit(bg_surf, r.topleft)
+        pygame.draw.rect(surface, self._BORDER, r, 2, border_radius=10)
+
+        # Title
+        title = self._font_title.render("Example Graphs", True, self._TITLE_COL)
+        surface.blit(title, (r.x + self._PAD, r.y + 6))
+
+        # Thin separator
+        pygame.draw.line(
+            surface, self._BORDER,
+            (r.x + self._PAD,           r.y + self._TITLE_H - 2),
+            (r.x + r.width - self._PAD, r.y + self._TITLE_H - 2), 1,
+        )
+
+        # Buttons
+        for btn, key, desc in self._buttons:
+            btn.draw(surface)
+
+        # Hovered description
+        if self._hovered_desc:
+            desc_surf = self._font_desc.render(
+                self._hovered_desc, True, self._DESC_COL
+            )
+            surface.blit(desc_surf, (r.x + self._PAD, self._desc_y))
