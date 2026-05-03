@@ -84,4 +84,4 @@ def connected_components(graph: "Graph", source: int = None) -> List[Dict]:
     for i, comp in enumerate(components):
         print(f"Component {i}: {comp}")
         
-    return steps
+    return steps, components
