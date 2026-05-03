@@ -116,9 +116,12 @@ class SandboxScreen:
             # ... (logic for enabled remains same)
             enabled = True
             if not is_weighted:
+                # MST and Shortest Path algorithms require weights
                 if name in ("dijkstra", "bellman_ford", "bellman", "kruskal", "prim"):
                     enabled = False
             
+            # BFS and DFS are traversal algorithms and work in all cases.
+            # CC, CFC, Welsh-Powell, and Eulerian were specifically requested to be always available.
 
             label = name.replace("_", " ").title()
             if name == "scc": label = "CFC"

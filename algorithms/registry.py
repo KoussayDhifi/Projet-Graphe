@@ -76,10 +76,15 @@ def run_algorithm(name: str, graph: "Graph", source: int = None, destination: in
     
     # Try to call with destination parameter (for traversal/path-finding algorithms)
     try:
-        return ALGORITHMS[name](graph, source, destination)
+        res = ALGORITHMS[name](graph, source, destination)
     except TypeError:
         # Fall back to calling without destination (for other algorithms)
-        return ALGORITHMS[name](graph, source)
+        res = ALGORITHMS[name](graph, source)
+    
+    # Some algorithms return (steps, extra_data); we only need steps for the UI
+    if isinstance(res, tuple):
+        return res[0]
+    return res
 
 
 def list_algorithms() -> List[str]:

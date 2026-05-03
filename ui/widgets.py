@@ -628,13 +628,12 @@ class AlgorithmCodePanel:
 
 # Each preset: (display_label, internal_key, description)
 GRAPH_PRESETS = [
-    ("📍 Shortest Path",    "dijkstra_shortest_path",    "Weighted graph for Dijkstra shortest path"),
-    ("🌳 MST (Prim)",       "prim_mst",                  "Weighted graph for Prim's minimum spanning tree"),
-    ("🔍 BFS Traversal",    "bfs_traversal",             "Tree structure for breadth-first search"),
-    ("🎨 Graph Coloring",   "coloring_welsh_powell",     "Complex graph for Welsh-Powell coloring"),
-    ("🔄 Eulerian Circuit", "eulerian_circuit",          "Eulerian graph with all even-degree vertices"),
-    ("🧩 Connected Comps.", "connected_components_graph", "Graph with multiple connected components"),
-    ("🔗 SCC (Directed)",   "scc_directed_graph",        "Directed graph for strongly connected components"),
+    ("📍 Shortest Path",    "dijkstra_shortest_path",     "Complex weighted graph for Dijkstra's algorithm"),
+    ("🌳 MST (Prim)",       "prim_mst",                   "Complex weighted graph for Prim's minimum spanning tree"),
+    ("🎨 Graph Coloring",   "coloring_welsh_powell",      "Complex graph for Welsh-Powell coloring algorithm"),
+    ("🔄 Eulerian Circuit", "eulerian_circuit",           "Complex Eulerian graph with all even-degree vertices"),
+    ("🧩 Connected Comps.", "connected_components_graph", "Complex graph with 3 separate connected components"),
+    ("🔗 SCC (Directed)",   "scc_directed_graph",         "Complex directed graph for strongly connected components"),
 ]
 
 

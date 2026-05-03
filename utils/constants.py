@@ -3,8 +3,8 @@
 # ============================================================
 
 # --- Window ---
-WINDOW_WIDTH = 1000
-WINDOW_HEIGHT = 700
+WINDOW_WIDTH = 1400
+WINDOW_HEIGHT = 900
 WINDOW_TITLE = "Graph Algorithms Visualization Platform"
 FPS = 60
 
@@ -33,6 +33,16 @@ NODE_COLOR_COMPONENT = [
     (255, 120, 60),   # Vivid tangerine
     (20,  180, 255),  # Vivid azure blue
     (245, 80,  140),  # Vivid rose pink
+    (255, 200, 50),   # Golden yellow
+    (100, 200, 220),  # Sky blue
+    (220, 100, 180),  # Mauve pink
+    (80,  220, 100),  # Spring green
+    (200, 150, 80),   # Burnt orange
+    (150, 100, 200),  # Lavender purple
+    (60,  180, 140),  # Teal
+    (255, 150, 150),  # Light coral
+    (180, 220, 100),  # Lime green
+    (200, 180, 240),  # Periwinkle
 ]
 
 # --- Edge visual ---
@@ -51,7 +61,7 @@ ANIMATION_SPEED_MIN     = 0.05
 ANIMATION_SPEED_MAX     = 2.0
 
 # --- UI Panel widths ---
-SIDEBAR_WIDTH  = 260
+SIDEBAR_WIDTH  = 350
 TOPBAR_HEIGHT  = 60
 
 # --- Creators ---
