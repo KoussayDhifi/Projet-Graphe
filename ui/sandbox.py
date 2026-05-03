@@ -3,6 +3,7 @@
 # ============================================================
 
 from __future__ import annotations
+import math
 import pygame
 from typing import Optional, Tuple, TYPE_CHECKING
 
@@ -48,6 +49,10 @@ class SandboxScreen:
         self._panning = False
         self._pan_start: Tuple[int, int] = (0, 0)
         self._pan_offset_start: Tuple[int, int] = (0, 0)
+
+        # Dragging state
+        self._dragging_node: Optional[int] = None
+        self._dragged = False
 
         # Weight input popup
         self._awaiting_weight = False
@@ -142,7 +147,7 @@ class SandboxScreen:
 
         # Animation controls — positioned after the algorithm/code area
         ctrl_y = code_top + code_h + 20
-        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Playyy")
+        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Play")
         self._btn_pause = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y, bw // 2 - 4, 30), "⏸ Pause")
         self._btn_step  = Button(pygame.Rect(sx, ctrl_y + 36, bw // 2 - 4, 30), "⏭ Step")
         self._btn_reset = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y + 36, bw // 2 - 4, 30), "↺ Reset")
@@ -329,21 +334,14 @@ class SandboxScreen:
 
         if event.button == 1:
             hit = self._node_at(canvas_pos)
-            if hit is None:
+            if hit is not None:
+                self._dragging_node = hit
+                self._dragged = False
+            else:
                 # Create node
                 node_id = self.ctrl.add_node(*canvas_pos)
                 self._status = f"Added node {node_id}"
                 self._selected = None
-            else:
-                if self._selected is None:
-                    self._selected = hit
-                    self._status = f"Node {hit} selected — click another node to add edge"
-                elif self._selected == hit:
-                    self._selected = None
-                    self._status = "Deselected"
-                else:
-                    # Create edge
-                    self._try_create_edge(self._selected, hit)
 
         elif event.button == 3:
             hit = self._node_at(canvas_pos)
@@ -353,7 +351,14 @@ class SandboxScreen:
                     self._selected = None
                 self._status = f"Removed node {hit}"
             else:
-                self._selected = None
+                # Check for edge deletion
+                edge_hit = self._edge_at(canvas_pos)
+                if edge_hit:
+                    src, dest = edge_hit
+                    self.ctrl.remove_edge(src, dest)
+                    self._status = f"Removed edge {src} \u2192 {dest}"
+                else:
+                    self._selected = None
 
         elif event.button == 2:
             self._panning = True
@@ -361,7 +366,24 @@ class SandboxScreen:
             self._pan_offset_start = self._offset
 
     def _on_mouse_up(self, event: pygame.event.Event) -> None:
-        if event.button == 2:
+        if event.button == 1:
+            if self._dragging_node is not None:
+                if not self._dragged:
+                    # It was a click, not a drag. Handle selection/edge creation.
+                    hit = self._dragging_node
+                    if self._selected is None:
+                        self._selected = hit
+                        self._status = f"Node {hit} selected \u2014 click another node to add edge"
+                    elif self._selected == hit:
+                        self._selected = None
+                        self._status = "Deselected"
+                    else:
+                        self._try_create_edge(self._selected, hit)
+                
+                self._dragging_node = None
+                self._dragged = False
+
+        elif event.button == 2:
             self._panning = False
 
     def _on_mouse_move(self, event: pygame.event.Event) -> None:
@@ -372,6 +394,12 @@ class SandboxScreen:
                 self._pan_offset_start[0] + dx,
                 self._pan_offset_start[1] + dy,
             )
+        elif self._dragging_node is not None:
+            self._dragged = True
+            canvas_pos = self._to_graph_coords(event.pos)
+            # Boundary check optional, but let's keep it simple for now
+            self.ctrl.graph.nodes[self._dragging_node] = canvas_pos
+
         canvas_pos = self._to_graph_coords(event.pos)
         self._hover_node = self._node_at(canvas_pos)
 
@@ -655,6 +683,31 @@ class SandboxScreen:
     def _to_graph_coords(self, screen_pos: tuple) -> tuple:
         ox, oy = self._offset
         return (screen_pos[0] - ox, screen_pos[1] - oy)
+
+    def _edge_at(self, pos: Tuple[int, int], threshold: float = 8.0) -> Optional[Tuple[int, int]]:
+        """Find an edge (src, dest) near the given canvas coordinates."""
+        px, py = pos
+        for src, dest, _ in self.ctrl.graph.edges:
+            if src not in self.ctrl.graph.nodes or dest not in self.ctrl.graph.nodes:
+                continue
+            x1, y1 = self.ctrl.graph.nodes[src]
+            x2, y2 = self.ctrl.graph.nodes[dest]
+            
+            # Vector from src to dest
+            dx, dy = x2 - x1, y2 - y1
+            l2 = dx*dx + dy*dy
+            if l2 == 0:
+                dist = math.hypot(px - x1, py - y1)
+            else:
+                # Projection of point onto line segment
+                t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / l2))
+                proj_x = x1 + t * dx
+                proj_y = y1 + t * dy
+                dist = math.hypot(px - proj_x, py - proj_y)
+                
+            if dist < threshold:
+                return (src, dest)
+        return None
 
     def _node_at(self, canvas_pos: tuple) -> Optional[int]:
         """Return the ID of the node at (canvas) position, or None."""
