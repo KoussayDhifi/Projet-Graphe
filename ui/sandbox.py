@@ -482,7 +482,11 @@ class SandboxScreen:
             if name == "eulerian":
                 self._alert_msg = str(e)
             else:
-                self._set_error(str(e))
+                self._status = f"Running {name} from node {source}"
+        #except NotImplementedError:
+            #self._set_error(f"{name} is not implemented yet.")
+        #except Exception as e:
+            #self._set_error(str(e))
 
     # ------------------------------------------------------------------
     # Update / Draw
@@ -583,6 +587,10 @@ class SandboxScreen:
         self._btn_pause.draw(self.surface)
         self._btn_step.draw(self.surface)
         self._btn_reset.draw(self.surface)
+
+        # Code panel — drawn last so it overlays the algorithm buttons
+        if self._panel_visible:
+            self._code_panel.draw(surface=self.surface)
 
         # Speed slider label
         spd_lbl = self._font_small.render("Step speed:", True, COLOR_TEXT_DIM)

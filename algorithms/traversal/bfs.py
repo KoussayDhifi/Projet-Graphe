@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 from typing import List, Dict, TYPE_CHECKING
+from collections import deque
 
 if TYPE_CHECKING:
     from core.graph import Graph
@@ -13,27 +14,54 @@ from animation.events import make_step, VISIT_NODE, PROCESS_NODE, TRAVERSE_EDGE,
 from collections import deque
 
 def bfs(graph: "Graph", source: int) -> List[Dict]:
-    steps: List[Dict] = []
-    if source not in graph.nodes:
-        return steps
+    """
+    Breadth-First Search with animation steps.
+    """
 
-    visited = {source}
-    queue = deque([source])
-    
-    steps.append(make_step(VISIT_NODE, node=source))
+    steps: List[Dict] = []
+
+    # Use adjacency list for efficiency
+    adj = graph.to_adj_list()
+
+    visited = set()
+    queue = deque()
+
+    # Initialize
+    visited.add(source)
+    queue.append(source)
+
+    steps.append({"type": "visit_node", "node": source})
 
     while queue:
-        u = queue.popleft()
-        steps.append(make_step(PROCESS_NODE, node=u))
+        current = queue.popleft()
+        steps.append({"type": "process_node", "node": current})
 
-        for v, weight in graph.neighbors(u):
-            steps.append(make_step(EXPLORE_EDGE, src=u, dest=v))
-            if v not in visited:
-                visited.add(v)
-                steps.append(make_step(TRAVERSE_EDGE, src=u, dest=v))
-                steps.append(make_step(VISIT_NODE, node=v))
-                queue.append(v)
+        for neighbor, _ in adj[current]:
+            steps.append({
+                "type": "explore_edge",
+                "src": current,
+                "dest": neighbor
+            })
+
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+                steps.append({
+                    "type": "traverse_edge",
+                    "src": current,
+                    "dest": neighbor
+                })
+
+                steps.append({
+                    "type": "visit_node",
+                    "node": neighbor
+                })
             else:
-                steps.append(make_step(REJECT_EDGE, src=u, dest=v))
+                steps.append({
+                    "type": "reject_edge",
+                    "src": current,
+                    "dest": neighbor
+                })
 
     return steps
