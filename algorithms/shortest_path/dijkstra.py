@@ -1,49 +1,61 @@
-# ============================================================
-# algorithms/shortest_path/dijkstra.py
-# ============================================================
+from typing import List, Dict
+import heapq
 
-from __future__ import annotations
-from typing import List, Dict, TYPE_CHECKING
+from animation.events import (
+    make_step,
+    VISIT_NODE,
+    RELAX_EDGE,
+    EXPLORE_EDGE,
+    REJECT_EDGE,
+    PROCESS_NODE,
+    FINAL_PATH,
+)
 
-if TYPE_CHECKING:
-    from core.graph import Graph
 
+def dijkstra(graph, source: int, destination: int) -> List[Dict]:
+    steps: List[Dict] = []
 
-def dijkstra(graph: "Graph", source: int) -> List[Dict]:
-    """
-    Compute single-source shortest paths using Dijkstra's algorithm.
+    adj = graph.to_adj_list()
+    dist = {node: float("inf") for node in graph.nodes}
+    parent = {node: None for node in graph.nodes}
 
-    Dijkstra's algorithm works on graphs with non-negative edge weights.
-    It maintains a priority queue (min-heap) ordered by tentative distance
-    and greedily settles nodes in order of increasing distance from the source.
+    dist[source] = 0
+    pq = [(0, source)]
 
-    Parameters
-    ----------
-    graph  : Graph  – the input graph (directed or undirected, weighted)
-    source : int    – the source node ID
+    while pq:
+        current_dist, u = heapq.heappop(pq)
 
-    Returns
-    -------
-    List[Dict]
-        A sequence of animation steps following the event protocol defined
-        in ``animation/events.py``.  Expected event types:
+        if current_dist > dist[u]:
+            continue
 
-        - VISIT_NODE      : when a node is extracted from the priority queue
-        - RELAX_EDGE      : when a shorter path to a neighbour is found
-        - EXPLORE_EDGE    : when an edge is examined
-        - REJECT_EDGE     : when an edge does not improve the distance
-        - PROCESS_NODE    : when a node's distance is finalised
-        - FINAL_PATH      : at the end, highlighting the shortest path tree
+        steps.append(make_step(VISIT_NODE, node=u))
 
-    Complexity
-    ----------
-    Time  : O((V + E) log V) with a binary heap
-    Space : O(V)
+        # 🎯 stop early when destination is finalized
+        if u == destination:
+            steps.append(make_step(PROCESS_NODE, node=u))
+            break
 
-    Raises
-    ------
-    NotImplementedError
-        This function is a placeholder; implementation is delegated to
-        the algorithm team.
-    """
-    raise NotImplementedError("dijkstra() has not been implemented yet.")
+        for v, w in adj[u]:
+            steps.append(make_step(EXPLORE_EDGE, src=u, dest=v))
+
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                parent[v] = u
+                heapq.heappush(pq, (dist[v], v))
+                steps.append(make_step(RELAX_EDGE, src=u, dest=v, weight=w))
+            else:
+                steps.append(make_step(REJECT_EDGE, src=u, dest=v))
+
+        steps.append(make_step(PROCESS_NODE, node=u))
+
+    # 🧱 reconstruct path
+    path = []
+    if dist[destination] != float("inf"):
+        cur = destination
+        while cur is not None:
+            path.append(cur)
+            cur = parent[cur]
+        path.reverse()
+
+    steps.append(make_step(FINAL_PATH, path=path))
+    return steps

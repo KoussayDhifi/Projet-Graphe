@@ -45,15 +45,16 @@ def register(name: str) -> Callable:
     return decorator
 
 
-def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
+def run_algorithm(name: str, graph: "Graph", source: int = None, destination: int = None) -> List[Dict]:
     """
     Look up and execute a registered algorithm by name.
 
     Parameters
     ----------
-    name   : str         – the registered algorithm name
-    graph  : Graph       – the graph to run on
-    source : int | None  – source node (required by most algorithms)
+    name        : str         – the registered algorithm name
+    graph       : Graph       – the graph to run on
+    source      : int | None  – source node (required by most algorithms)
+    destination : int | None  – destination node (optional, for path-finding algorithms)
 
     Returns
     -------
@@ -72,7 +73,13 @@ def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
             f"Algorithm '{name}' is not registered. "
             f"Available: {sorted(ALGORITHMS.keys())}"
         )
-    return ALGORITHMS[name](graph, source)
+    
+    # Try to call with destination parameter (for traversal/path-finding algorithms)
+    try:
+        return ALGORITHMS[name](graph, source, destination)
+    except TypeError:
+        # Fall back to calling without destination (for other algorithms)
+        return ALGORITHMS[name](graph, source)
 
 
 def list_algorithms() -> List[str]:

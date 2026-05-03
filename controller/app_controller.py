@@ -71,21 +71,22 @@ class AppController:
     # Algorithm execution
     # ------------------------------------------------------------------
 
-    def run_algorithm(self, name: str, source: Optional[int] = None) -> None:
+    def run_algorithm(self, name: str, source: Optional[int] = None, destination: Optional[int] = None) -> None:
         """
         Execute a registered algorithm and prepare the animation engine.
 
         Parameters
         ----------
-        name   : str       – registered algorithm name
-        source : int|None  – source node for the algorithm
+        name        : str       – registered algorithm name
+        source      : int|None  – source node for the algorithm
+        destination : int|None  – destination node (for algorithms that support it)
 
         Raises
         ------
         NotImplementedError  – if the algorithm stub hasn't been implemented
         ValueError           – if the name is unknown
         """
-        steps: List[Dict] = run_algorithm(name, self.graph, source)
+        steps: List[Dict] = run_algorithm(name, self.graph, source, destination)
         self.visual_state.reset()
         self._renderer.reset()
         self.engine = AnimationEngine(steps)
