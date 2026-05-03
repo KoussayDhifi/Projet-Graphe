@@ -32,34 +32,164 @@ def _ring(n: int, cx: int, cy: int, r: int) -> list[tuple[int, int]]:
 # Presets
 # ------------------------------------------------------------------
 
-def gen_complete_k5(graph: "Graph", cx: int, cy: int) -> None:
-    """Complete graph K₅ — 5 nodes, every pair connected."""
-    positions = _ring(5, cx, cy, 110)
+def gen_dijkstra_shortest_path(graph: "Graph", cx: int, cy: int) -> None:
+    """Weighted graph for testing Dijkstra's algorithm (shortest path)."""
+    positions = _ring(6, cx, cy, 120)
     ids = [graph.add_node(x, y) for x, y in positions]
-    for i in range(len(ids)):
-        for j in range(i + 1, len(ids)):
-            graph.add_edge(ids[i], ids[j])
+    # Create edges with weights
+    edges = [
+        (ids[0], ids[1], 4),
+        (ids[0], ids[2], 2),
+        (ids[1], ids[2], 1),
+        (ids[1], ids[3], 5),
+        (ids[2], ids[3], 8),
+        (ids[2], ids[4], 10),
+        (ids[3], ids[4], 2),
+        (ids[3], ids[5], 6),
+        (ids[4], ids[5], 3),
+    ]
+    for src, dest, w in edges:
+        graph.add_edge(src, dest, w)
 
 
-def gen_petersen(graph: "Graph", cx: int, cy: int) -> None:
-    """Petersen graph — 10 nodes, classic non-planar graph."""
-    outer = _ring(5, cx, cy, 130)
-    inner = _ring(5, cx, cy, 65)
-    # rotate inner ring by 36° for standard Petersen look
-    inner = _ring_rotated(5, cx, cy, 65, offset_angle=math.pi / 5)
+def gen_prim_mst(graph: "Graph", cx: int, cy: int) -> None:
+    """Weighted graph for testing Prim's MST algorithm."""
+    positions = _ring(6, cx, cy, 120)
+    ids = [graph.add_node(x, y) for x, y in positions]
+    edges = [
+        (ids[0], ids[1], 7),
+        (ids[0], ids[2], 5),
+        (ids[1], ids[2], 8),
+        (ids[1], ids[3], 7),
+        (ids[2], ids[3], 15),
+        (ids[2], ids[4], 6),
+        (ids[3], ids[4], 5),
+        (ids[3], ids[5], 1),
+        (ids[4], ids[5], 2),
+    ]
+    for src, dest, w in edges:
+        graph.add_edge(src, dest, w)
 
-    out_ids = [graph.add_node(x, y) for x, y in outer]
-    inn_ids = [graph.add_node(x, y) for x, y in inner]
 
-    # Outer pentagon
-    for i in range(5):
-        graph.add_edge(out_ids[i], out_ids[(i + 1) % 5])
-    # Spokes
-    for i in range(5):
-        graph.add_edge(out_ids[i], inn_ids[i])
-    # Inner pentagram (skip-1 connections)
-    for i in range(5):
-        graph.add_edge(inn_ids[i], inn_ids[(i + 2) % 5])
+def gen_bfs_traversal(graph: "Graph", cx: int, cy: int) -> None:
+    """Connected graph for testing BFS traversal."""
+    # Create a simple tree structure
+    positions = [
+        (cx, cy - 100),        # 0 (root)
+        (cx - 80, cy - 20),    # 1 (left child)
+        (cx + 80, cy - 20),    # 2 (right child)
+        (cx - 120, cy + 60),   # 3
+        (cx - 40, cy + 60),    # 4
+        (cx + 40, cy + 60),    # 5
+        (cx + 120, cy + 60),   # 6
+    ]
+    ids = [graph.add_node(x, y) for x, y in positions]
+    edges = [
+        (ids[0], ids[1]),
+        (ids[0], ids[2]),
+        (ids[1], ids[3]),
+        (ids[1], ids[4]),
+        (ids[2], ids[5]),
+        (ids[2], ids[6]),
+    ]
+    for src, dest in edges:
+        graph.add_edge(src, dest)
+
+
+def gen_coloring_welsh_powell(graph: "Graph", cx: int, cy: int) -> None:
+    """Graph for testing graph coloring (Welsh-Powell algorithm)."""
+    # Create an undirected graph with varying degrees
+    positions = [
+        (cx - 100, cy - 80),   # 0
+        (cx - 50, cy - 80),    # 1
+        (cx + 50, cy - 80),    # 2
+        (cx + 100, cy - 80),   # 3
+        (cx - 75, cy + 60),    # 4
+        (cx + 75, cy + 60),    # 5
+        (cx, cy + 120),        # 6
+    ]
+    ids = [graph.add_node(x, y) for x, y in positions]
+    edges = [
+        (ids[0], ids[1]),
+        (ids[0], ids[4]),
+        (ids[1], ids[2]),
+        (ids[1], ids[4]),
+        (ids[2], ids[3]),
+        (ids[2], ids[5]),
+        (ids[3], ids[5]),
+        (ids[4], ids[6]),
+        (ids[5], ids[6]),
+        (ids[0], ids[2]),
+    ]
+    for src, dest in edges:
+        graph.add_edge(src, dest)
+
+
+def gen_eulerian_circuit(graph: "Graph", cx: int, cy: int) -> None:
+    """Eulerian graph for testing Eulerian circuit/path algorithm."""
+    # Create a simple graph where ALL vertices have even degree (Eulerian circuit exists)
+    positions = [
+        (cx - 100, cy - 60),   # 0
+        (cx + 100, cy - 60),   # 1
+        (cx + 100, cy + 60),   # 2
+        (cx - 100, cy + 60),   # 3
+    ]
+    ids = [graph.add_node(x, y) for x, y in positions]
+    # Create edges so each vertex has degree 2 (Eulerian circuit)
+    edges = [
+        (ids[0], ids[1]),
+        (ids[1], ids[2]),
+        (ids[2], ids[3]),
+        (ids[3], ids[0]),
+    ]
+    for src, dest in edges:
+        graph.add_edge(src, dest)
+
+
+def gen_connected_components_graph(graph: "Graph", cx: int, cy: int) -> None:
+    """Graph with multiple connected components."""
+    # Component 1 (left)
+    comp1_pos = [(cx - 150, cy - 80), (cx - 100, cy), (cx - 150, cy + 80)]
+    comp1_ids = [graph.add_node(x, y) for x, y in comp1_pos]
+    graph.add_edge(comp1_ids[0], comp1_ids[1])
+    graph.add_edge(comp1_ids[1], comp1_ids[2])
+    
+    # Component 2 (middle)
+    comp2_pos = [(cx, cy - 80), (cx + 50, cy), (cx, cy + 80), (cx + 100, cy)]
+    comp2_ids = [graph.add_node(x, y) for x, y in comp2_pos]
+    graph.add_edge(comp2_ids[0], comp2_ids[1])
+    graph.add_edge(comp2_ids[1], comp2_ids[2])
+    graph.add_edge(comp2_ids[2], comp2_ids[3])
+    graph.add_edge(comp2_ids[3], comp2_ids[0])
+    
+    # Component 3 (right - single isolated node)
+    graph.add_node(cx + 180, cy)
+
+
+def gen_scc_directed_graph(graph: "Graph", cx: int, cy: int) -> None:
+    """Directed graph for testing strongly connected components."""
+    positions = [
+        (cx - 120, cy - 60),   # 0
+        (cx, cy - 60),         # 1
+        (cx + 120, cy - 60),   # 2
+        (cx - 120, cy + 60),   # 3
+        (cx, cy + 60),         # 4
+        (cx + 120, cy + 60),   # 5
+    ]
+    ids = [graph.add_node(x, y) for x, y in positions]
+    # Create strongly connected components
+    edges = [
+        (ids[0], ids[1]),
+        (ids[1], ids[0]),  # SCC: {0, 1}
+        (ids[1], ids[2]),
+        (ids[2], ids[1]),  # SCC: {1, 2}
+        (ids[3], ids[4]),
+        (ids[4], ids[5]),
+        (ids[5], ids[3]),  # SCC: {3, 4, 5}
+        (ids[2], ids[5]),  # Edge from one SCC to another
+    ]
+    for src, dest in edges:
+        graph.add_edge(src, dest)
 
 
 def _ring_rotated(n, cx, cy, r, offset_angle=0.0):
@@ -71,115 +201,18 @@ def _ring_rotated(n, cx, cy, r, offset_angle=0.0):
     return positions
 
 
-def gen_star_s7(graph: "Graph", cx: int, cy: int) -> None:
-    """Star graph S₇ — central hub connected to 7 leaves."""
-    hub = graph.add_node(cx, cy)
-    leaves = _ring(7, cx, cy, 120)
-    for x, y in leaves:
-        leaf_id = graph.add_node(x, y)
-        graph.add_edge(hub, leaf_id)
-
-
-def gen_cycle_c8(graph: "Graph", cx: int, cy: int) -> None:
-    """Cycle C₈ — 8-node ring."""
-    positions = _ring(8, cx, cy, 120)
-    ids = [graph.add_node(x, y) for x, y in positions]
-    for i in range(len(ids)):
-        graph.add_edge(ids[i], ids[(i + 1) % len(ids)])
-
-
-def gen_grid_3x3(graph: "Graph", cx: int, cy: int) -> None:
-    """3×3 grid / lattice graph — 9 nodes."""
-    spacing = 90
-    rows, cols = 3, 3
-    grid: dict[tuple[int, int], int] = {}
-    ox = cx - (cols - 1) * spacing // 2
-    oy = cy - (rows - 1) * spacing // 2
-    for r in range(rows):
-        for c in range(cols):
-            x = ox + c * spacing
-            y = oy + r * spacing
-            grid[(r, c)] = graph.add_node(x, y)
-    for r in range(rows):
-        for c in range(cols):
-            if c + 1 < cols:
-                graph.add_edge(grid[(r, c)], grid[(r, c + 1)])
-            if r + 1 < rows:
-                graph.add_edge(grid[(r, c)], grid[(r + 1, c)])
-
-
-def gen_bin_tree(graph: "Graph", cx: int, cy: int) -> None:
-    """Complete binary tree with 4 levels (15 nodes)."""
-    levels = 4
-    v_gap  = 70
-    top_y  = cy - (levels - 1) * v_gap // 2
-    nodes: dict[int, int] = {}   # tree_index → graph_id
-
-    def add(idx: int, x: int, y: int) -> None:
-        nodes[idx] = graph.add_node(x, y)
-
-    # Level 0: root
-    add(1, cx, top_y)
-
-    for lvl in range(1, levels):
-        count    = 2 ** lvl
-        h_span   = min(count * 60, 500)
-        step     = h_span // count if count > 1 else 0
-        start_x  = cx - h_span // 2 + step // 2
-        y        = top_y + lvl * v_gap
-        for pos in range(count):
-            idx = 2 ** lvl + pos
-            x   = start_x + pos * step
-            add(idx, x, y)
-            parent_idx = idx // 2
-            graph.add_edge(nodes[parent_idx], nodes[idx])
-
-
-def gen_bipartite(graph: "Graph", cx: int, cy: int) -> None:
-    """Complete bipartite K₃,₄ — two groups, all cross-edges."""
-    left_n, right_n = 3, 4
-    v_gap   = 70
-    h_gap   = 160
-
-    left_ids  = []
-    right_ids = []
-
-    left_top  = cy - (left_n  - 1) * v_gap // 2
-    right_top = cy - (right_n - 1) * v_gap // 2
-
-    for i in range(left_n):
-        left_ids.append(graph.add_node(cx - h_gap, left_top  + i * v_gap))
-    for i in range(right_n):
-        right_ids.append(graph.add_node(cx + h_gap, right_top + i * v_gap))
-
-    for l in left_ids:
-        for r in right_ids:
-            graph.add_edge(l, r)
-
-
-def gen_path_p8(graph: "Graph", cx: int, cy: int) -> None:
-    """Path graph P₈ — 8 nodes in a straight chain."""
-    n      = 8
-    h_gap  = 80
-    start_x = cx - (n - 1) * h_gap // 2
-    ids = [graph.add_node(start_x + i * h_gap, cy) for i in range(n)]
-    for i in range(len(ids) - 1):
-        graph.add_edge(ids[i], ids[i + 1])
-
-
 # ------------------------------------------------------------------
 # Dispatcher
 # ------------------------------------------------------------------
 
 _GENERATORS = {
-    "complete_k5": gen_complete_k5,
-    "petersen":    gen_petersen,
-    "star_s7":     gen_star_s7,
-    "cycle_c8":    gen_cycle_c8,
-    "grid_3x3":    gen_grid_3x3,
-    "bin_tree":    gen_bin_tree,
-    "bipartite":   gen_bipartite,
-    "path_p8":     gen_path_p8,
+    "dijkstra_shortest_path":    gen_dijkstra_shortest_path,
+    "prim_mst":                  gen_prim_mst,
+    "bfs_traversal":             gen_bfs_traversal,
+    "coloring_welsh_powell":     gen_coloring_welsh_powell,
+    "eulerian_circuit":          gen_eulerian_circuit,
+    "connected_components_graph": gen_connected_components_graph,
+    "scc_directed_graph":        gen_scc_directed_graph,
 }
 
 

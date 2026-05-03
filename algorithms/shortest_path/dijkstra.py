@@ -14,7 +14,7 @@ from animation.events import (
 
 def dijkstra(graph, source: int, destination: int) -> List[Dict]:
     steps: List[Dict] = []
-
+    print(f"Running Dijkstra's algorithm from node {source} to node {destination}")
     adj = graph.to_adj_list()
     dist = {node: float("inf") for node in graph.nodes}
     parent = {node: None for node in graph.nodes}

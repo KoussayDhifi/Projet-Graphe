@@ -118,9 +118,7 @@ class SandboxScreen:
             if not is_weighted:
                 if name in ("dijkstra", "bellman_ford", "bellman", "kruskal", "prim"):
                     enabled = False
-            elif not is_directed:
-                if name in ("dijkstra", "bellman_ford", "bellman"):
-                    enabled = False
+            
 
             label = name.replace("_", " ").title()
             if name == "scc": label = "CFC"
@@ -467,11 +465,14 @@ class SandboxScreen:
         if source is None and self.ctrl.graph.node_count() > 0:
             # Default to first node
             source = next(iter(self.ctrl.graph.nodes))
+        
+        destination = next(reversed(self.ctrl.graph.nodes))
+
         try:
-            self.ctrl.run_algorithm(name, source)
+            self.ctrl.run_algorithm(name, source, destination)
             self._current_algorithm = name
             self._last_step_type = None
-            self._status = f"Running {name} from node {source}"
+            self._status = f"Running {name} from node {source} to node {destination}"
             self.ctrl.animation_play()
             # Load pseudocode for the selected algorithm and reset highlight
             self._code_panel.set_algorithm(name)
@@ -482,11 +483,9 @@ class SandboxScreen:
             if name == "eulerian":
                 self._alert_msg = str(e)
             else:
-                self._status = f"Running {name} from node {source}"
-        #except NotImplementedError:
-            #self._set_error(f"{name} is not implemented yet.")
-        #except Exception as e:
-            #self._set_error(str(e))
+                self._alert_msg = str(e)
+       
+            
 
     # ------------------------------------------------------------------
     # Update / Draw

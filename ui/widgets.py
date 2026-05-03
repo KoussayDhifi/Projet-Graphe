@@ -351,6 +351,21 @@ ALGO_PSEUDOCODE: dict[str, list[str]] = {
         "      supprimer arête parcourue",
         "    sinon : ajouter u au circuit",
     ],
+    "bellman": [
+    "BellmanDP(G, source):",
+    "  initialiser dist[0][v] = ∞",
+    "  dist[0][source] = 0",
+    "  pour k de 1 à |V| :",
+    "    pour chaque sommet v :",
+    "      dist[k][v] = dist[k-1][v]",
+    "    pour chaque arête (u, v, w) :",
+    "      si dist[k-1][u] + w < dist[k][v] :",
+    "        dist[k][v] = dist[k-1][u] + w",
+    "        prec[v] = u",
+    "      sinon : ne rien faire",
+    "  vérifier cycle négatif",
+    "  reconstruire chemins",
+],
 }
 
 # Maps event types emitted by each algorithm to the pseudocode
@@ -418,6 +433,13 @@ ALGO_EVENT_LINE: dict[str, dict[str, int]] = {
         "traverse_edge": 5,
         "final_path":    7,
     },
+    "bellman": {
+    "visit_node":   2,   # dist[source] = 0
+    "explore_edge": 6,   # for each edge
+    "relax_edge":   8,   # update dist
+    "reject_edge":  10,  # ne rien faire
+    "final_path":   12,  # reconstruction
+},
 }
 
 
@@ -449,8 +471,8 @@ class AlgorithmCodePanel:
     """
 
     # Visual constants
-    _PADDING       = 10          # inner padding (px)
-    _LINE_HEIGHT   = 18          # px per pseudocode row
+    _PADDING       = 30          # inner padding (px)
+    _LINE_HEIGHT   = 20          # px per pseudocode row
     _HEADER_H      = 24          # height of the "Algorithm code" header
     _BORDER_RADIUS = 8
 
@@ -606,14 +628,13 @@ class AlgorithmCodePanel:
 
 # Each preset: (display_label, internal_key, description)
 GRAPH_PRESETS = [
-    ("★ Complete K5",   "complete_k5",   "5 nodes, every pair connected"),
-    ("⬡ Petersen",      "petersen",      "Classic 10-node non-planar graph"),
-    ("⊙ Star S7",       "star_s7",       "Hub node connected to 7 leaves"),
-    ("⬤ Cycle C8",      "cycle_c8",      "8-node ring / cycle"),
-    ("▦ Grid 3×3",      "grid_3x3",      "9-node lattice graph"),
-    ("▲ Bin. Tree",     "bin_tree",       "15-node complete binary tree"),
-    ("⬛ Bipartite",    "bipartite",     "K₃,₄ — two groups, all cross-edges"),
-    ("〜 Path P8",      "path_p8",       "8 nodes in a straight chain"),
+    ("📍 Shortest Path",    "dijkstra_shortest_path",    "Weighted graph for Dijkstra shortest path"),
+    ("🌳 MST (Prim)",       "prim_mst",                  "Weighted graph for Prim's minimum spanning tree"),
+    ("🔍 BFS Traversal",    "bfs_traversal",             "Tree structure for breadth-first search"),
+    ("🎨 Graph Coloring",   "coloring_welsh_powell",     "Complex graph for Welsh-Powell coloring"),
+    ("🔄 Eulerian Circuit", "eulerian_circuit",          "Eulerian graph with all even-degree vertices"),
+    ("🧩 Connected Comps.", "connected_components_graph", "Graph with multiple connected components"),
+    ("🔗 SCC (Directed)",   "scc_directed_graph",        "Directed graph for strongly connected components"),
 ]
 
 
