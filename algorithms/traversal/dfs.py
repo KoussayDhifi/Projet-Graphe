@@ -9,37 +9,32 @@ if TYPE_CHECKING:
     from core.graph import Graph
 
 
+from animation.events import make_step, VISIT_NODE, PROCESS_NODE, TRAVERSE_EDGE, REJECT_EDGE
+
 def dfs(graph: "Graph", source: int) -> List[Dict]:
-    """
-    Traverse the graph using Depth-First Search (DFS).
+    steps: List[Dict] = []
+    if source not in graph.nodes:
+        return steps
 
-    DFS explores as deep as possible along each branch before backtracking.
-    It can be implemented recursively or iteratively with an explicit stack.
-    DFS is foundational to many other algorithms (topological sort, SCC, etc.).
+    visited = set()
+    stack = [source]
 
-    Parameters
-    ----------
-    graph  : Graph  – the input graph (directed or undirected)
-    source : int    – the starting node ID
+    while stack:
+        u = stack.pop()
+        if u not in visited:
+            visited.add(u)
+            steps.append(make_step(VISIT_NODE, node=u))
+            steps.append(make_step(PROCESS_NODE, node=u))
 
-    Returns
-    -------
-    List[Dict]
-        Animation steps following the event protocol.  Expected events:
+            # Reverse neighbors to maintain order typical for DFS stack
+            neighbors = list(graph.neighbors(u))
+            neighbors.reverse()
+            for v, weight in neighbors:
+                steps.append(make_step(EXPLORE_EDGE, src=u, dest=v))
+                if v not in visited:
+                    steps.append(make_step(TRAVERSE_EDGE, src=u, dest=v))
+                    stack.append(v)
+                else:
+                    steps.append(make_step(REJECT_EDGE, src=u, dest=v))
 
-        - VISIT_NODE     : when a node is first discovered (grey)
-        - PROCESS_NODE   : when a node is fully explored (black)
-        - TRAVERSE_EDGE  : when DFS descends into a tree edge
-        - REJECT_EDGE    : when a back / cross / forward edge is encountered
-
-    Complexity
-    ----------
-    Time  : O(V + E)
-    Space : O(V)  (call stack depth)
-
-    Raises
-    ------
-    NotImplementedError
-        Placeholder — to be implemented by the algorithm team.
-    """
-    raise NotImplementedError("dfs() has not been implemented yet.")
+    return steps
