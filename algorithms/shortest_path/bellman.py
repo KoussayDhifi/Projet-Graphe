@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import List, Dict, TYPE_CHECKING
+from collections import deque
 
 if TYPE_CHECKING:
     from core.graph import Graph
@@ -11,133 +12,97 @@ from animation.events import (
 
 def bellman(graph: "Graph", source: int) -> List[Dict]:
     """
-    Compute single-source shortest paths using Bellman's original Dynamic Programming formulation.
+    Calcule les plus courts chemins à source unique pour un Graphe Orienté Sans Circuit (DAG).
+    
+    Cet algorithme correspond à la version simplifiée de Bellman pour les graphes 
+    sans circuit. Il utilise un tri topologique pour s'assurer qu'un sommet est 
+    traité uniquement lorsque tous ses prédécesseurs l'ont été.
 
-    Unlike Bellman-Ford, which optimises space by updating a 1D array in-place,
-    pure Bellman's algorithm explicitly computes paths based on hop-counts. It maintains
-    a 2D table `dist[k][v]` representing the shortest path to node `v` using at most `k` edges.
-
-    Parameters
+    Complexité
     ----------
-    graph  : Graph  – the input graph (directed or undirected)
-    source : int    – the source node ID
-
-    Returns
-    -------
-    List[Dict]
-        Animation steps following the event protocol.  Expected events:
-
-        - VISIT_NODE   : when a node's distance is first reduced to a finite value
-        - RELAX_EDGE   : each time an edge relaxation succeeds (distance improved)
-        - REJECT_EDGE  : each time an edge relaxation fails (no improvement)
-        - FINAL_PATH   : emitted once per reachable node with the shortest path
-                         from source to that node
-
-    Raises
-    ------
-    ValueError
-        If a negative-weight cycle reachable from *source* is detected.
-
-    Complexity
-    ----------
-    Time  : O(V × E)
-    Space : O(V²) - specifically to maintain the explicit 2D Dynamic Programming table.
-            (Can be optimized to O(V) by only keeping the k and k-1 arrays, but kept
-            as O(V²) here to explicitly model the Bellman Equation state).
+    Temps  : O(V + E) - très efficace grâce au tri topologique.
+    Espace : O(V) - un simple tableau 1D suffit.
     """
     steps: List[Dict] = []
 
     if source not in graph.nodes:
-        raise KeyError(f"Source node {source} does not exist in the graph.")
+        raise KeyError(f"Le nœud source {source} n'existe pas dans le graphe.")
+    
+    if not graph.directed:
+        raise ValueError("L'algorithme pour graphes sans circuit nécessite un graphe orienté (DAG).")
 
     INF = float("inf")
     node_ids = list(graph.nodes.keys())
     V = len(node_ids)
 
-    all_edges: List[tuple] = []
+    # 1. Construction de la liste d'adjacence et calcul des degrés entrants (in-degree)
+    adj: Dict[int, List[tuple]] = {n: [] for n in node_ids}
+    in_degree: Dict[int, int] = {n: 0 for n in node_ids}
+
     for src, dest, weight in graph.edges:
-        all_edges.append((src, dest, weight))
-        if not graph.directed:
-            all_edges.append((dest, src, weight))
+        adj[src].append((dest, weight))
+        in_degree[dest] += 1
 
-    # dist[k][v] : best distance from source to v using at most k edges
-    dist: Dict[int, Dict[int, float]] = {k: {nid: INF for nid in node_ids} for k in range(V)}
-    dist[0][source] = 0.0
+    # 2. Tri Topologique (Algorithme de Kahn)
+    # Permet de trouver un ordre où chaque sommet est visité après tous ses prédécesseurs
+    queue = deque([n for n in node_ids if in_degree[n] == 0])
+    topo_order = []
 
-    # prev[v] : overarching predecessor of v for path reconstruction
-    prev: Dict[int, int | None] = {nid: None for nid in node_ids}
+    while queue:
+        u = queue.popleft()
+        topo_order.append(u)
+        for v, w in adj[u]:
+            in_degree[v] -= 1
+            if in_degree[v] == 0:
+                queue.append(v)
 
-    # Emit VISIT_NODE for the source immediately
+    if len(topo_order) != V:
+        raise ValueError("Un circuit a été détecté. Ce graphe n'est pas un DAG.")
+
+    # 3. Initialisation des distances (1D au lieu de 2D)
+    dist: Dict[int, float] = {n: INF for n in node_ids}
+    prev: Dict[int, int | None] = {n: None for n in node_ids}
+    dist[source] = 0.0
+
+    # Émettre VISIT_NODE pour la source
     steps.append(make_step(VISIT_NODE, node=source))
 
-    # ----------------------------------------------------------------
-    # Main DP loop: Compute paths using strictly 1 to V-1 hops
-    # ----------------------------------------------------------------
-    for k in range(1, V):
-        relaxed_any = False
+    # 4. Boucle principale : relaxation selon l'ordre topologique
+    for u in topo_order:
+        # Si le nœud u n'est pas atteignable, il ne peut pas relaxer ses voisins
+        if dist[u] == INF:
+            for v, w in adj[u]:
+                steps.append(make_step(REJECT_EDGE, src=u, dest=v))
+            continue
 
-        # 1. Carry over the best distances from the previous hop count
-        for nid in node_ids:
-            dist[k][nid] = dist[k - 1][nid]
+        for v, w in adj[u]:
+            new_dist = dist[u] + w
 
-        # 2. Relax edges reading strictly from the (k-1) state
-        for src, dest, weight in all_edges:
-            if dist[k - 1][src] == INF:
-                # Source unreachable in k-1 hops — cannot form a k-hop path through it
-                steps.append(make_step(REJECT_EDGE, src=src, dest=dest))
-                continue
-
-            new_dist = dist[k - 1][src] + weight
-
-            if new_dist < dist[k][dest]:
-                # Relaxation succeeded using exactly k hops
-                first_visit = dist[k - 1][dest] == INF and dist[k][dest] == INF
+            if new_dist < dist[v]:
+                first_visit = (dist[v] == INF)
+                dist[v] = new_dist
+                prev[v] = u
                 
-                dist[k][dest] = new_dist
-                prev[dest] = src
-                relaxed_any = True
-
-                steps.append(make_step(RELAX_EDGE, src=src, dest=dest, weight=weight))
-
+                steps.append(make_step(RELAX_EDGE, src=u, dest=v, weight=w))
+                
                 if first_visit:
-                    steps.append(make_step(VISIT_NODE, node=dest))
+                    steps.append(make_step(VISIT_NODE, node=v))
             else:
-                # Relaxation failed — no improvement over the k-1 state or previous edge this pass
-                steps.append(make_step(REJECT_EDGE, src=src, dest=dest))
+                steps.append(make_step(REJECT_EDGE, src=u, dest=v))
 
-        if not relaxed_any:
-            # Early exit: If no shorter path exists using k edges, propagate current state to end
-            for j in range(k + 1, V):
-                for nid in node_ids:
-                    dist[j][nid] = dist[k][nid]
-            break
-
-    # ----------------------------------------------------------------
-    # Negative-cycle detection
-    # ----------------------------------------------------------------
-    # If a V-th edge relaxation improves the state of dist[V-1], a cycle exists.
-    for src, dest, weight in all_edges:
-        if dist[V - 1][src] != INF and dist[V - 1][src] + weight < dist[V - 1][dest]:
-            raise ValueError(
-                f"Negative-weight cycle detected reachable from source {source}."
-            )
-
-    # ----------------------------------------------------------------
-    # Emit FINAL_PATH for every reachable node
-    # ----------------------------------------------------------------
-    final_dist = dist[V - 1]
-
+    # 5. Reconstruire et émettre FINAL_PATH pour chaque nœud atteignable
     for target in node_ids:
         if target == source:
             steps.append(make_step(FINAL_PATH, path=[source]))
             continue
 
-        if final_dist[target] == INF:
+        if dist[target] == INF:
             continue
 
-        # Reconstruct path by walking prev[] pointers
         path: List[int] = []
         current: int | None = target
+        
+        # Le graphe est garanti sans circuit, mais on garde une sécurité par habitude
         visited_check: set = set()
 
         while current is not None:
