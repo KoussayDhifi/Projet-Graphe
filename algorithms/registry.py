@@ -91,6 +91,7 @@ def list_algorithms() -> List[str]:
 def _auto_register() -> None:
     from algorithms.shortest_path.dijkstra    import dijkstra
     from algorithms.shortest_path.bellman_ford import bellman_ford
+    from algorithms.shortest_path.bellman import bellman
     from algorithms.mst.kruskal               import kruskal
     from algorithms.mst.prim                  import prim
     from algorithms.traversal.bfs             import bfs
@@ -104,8 +105,7 @@ def _auto_register() -> None:
         "bellman_ford":      bellman_ford,
         "kruskal":           kruskal,
         "prim":              prim,
-        "bfs":               bfs,
-        "dfs":               dfs,
+        "bellman":           bellman,
         "connected":         connected_components,
         "scc":               strongly_connected_components,
         "welsh_powell":      welsh_powell,
