@@ -45,7 +45,7 @@ def register(name: str) -> Callable:
     return decorator
 
 
-def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
+def run_algorithm(name: str, graph: "Graph", source: int = None, **kwargs) -> List[Dict]:
     """
     Look up and execute a registered algorithm by name.
 
@@ -54,6 +54,7 @@ def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
     name   : str         – the registered algorithm name
     graph  : Graph       – the graph to run on
     source : int | None  – source node (required by most algorithms)
+    kwargs : dict        – additional algorithm-specific arguments
 
     Returns
     -------
@@ -72,7 +73,7 @@ def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
             f"Algorithm '{name}' is not registered. "
             f"Available: {sorted(ALGORITHMS.keys())}"
         )
-    return ALGORITHMS[name](graph, source)
+    return ALGORITHMS[name](graph, source, **kwargs)
 
 
 def list_algorithms() -> List[str]:
@@ -99,6 +100,7 @@ def _auto_register() -> None:
     from algorithms.components.connected      import connected_components
     from algorithms.components.scc            import strongly_connected_components
     from algorithms.coloring.welsh_powell     import welsh_powell
+    from algorithms.eulerian.eulerian         import eulerian
 
     ALGORITHMS.update({
         "dijkstra":          dijkstra,
@@ -109,6 +111,7 @@ def _auto_register() -> None:
         "connected":         connected_components,
         "scc":               strongly_connected_components,
         "welsh_powell":      welsh_powell,
+        "eulerian":          eulerian,
     })
 
 

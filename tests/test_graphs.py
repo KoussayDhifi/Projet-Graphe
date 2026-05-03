@@ -265,9 +265,15 @@ class TestAlgorithmInterfaces:
         from algorithms.shortest_path.bellman_ford import bellman_ford
         self._check_stub(bellman_ford, make_weighted_graph(), 0)
 
-    def test_kruskal_stub(self):
+    def test_kruskal_mst(self):
         from algorithms.mst.kruskal import kruskal
-        self._check_stub(kruskal, make_weighted_graph())
+        steps = kruskal(make_small_graph())
+        assert steps
+        assert steps[-1]["type"] == "final_tree"
+        assert len(steps[-1]["edges"]) == 3
+        assert {step["type"] for step in steps}.issubset({
+            "explore_edge", "select_edge", "discard_edge", "final_tree"
+        })
 
     def test_prim_stub(self):
         from algorithms.mst.prim import prim

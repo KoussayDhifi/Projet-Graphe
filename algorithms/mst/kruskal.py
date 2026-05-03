@@ -42,4 +42,44 @@ def kruskal(graph: "Graph", source: int = None) -> List[Dict]:
     NotImplementedError
         Placeholder — to be implemented by the algorithm team.
     """
-    raise NotImplementedError("kruskal() has not been implemented yet.")
+    steps: List[Dict] = []
+
+    # Code panel markers (ignored by renderer, used for highlighting)
+    steps.append({"type": "code_init"})
+    steps.append({"type": "code_sort"})
+
+    parent = {node_id: node_id for node_id in graph.nodes}
+    rank = {node_id: 0 for node_id in graph.nodes}
+
+    def find(node_id: int) -> int:
+        while parent[node_id] != node_id:
+            parent[node_id] = parent[parent[node_id]]
+            node_id = parent[node_id]
+        return node_id
+
+    def union(left: int, right: int) -> bool:
+        root_left = find(left)
+        root_right = find(right)
+        if root_left == root_right:
+            return False
+        if rank[root_left] < rank[root_right]:
+            parent[root_left] = root_right
+        elif rank[root_left] > rank[root_right]:
+            parent[root_right] = root_left
+        else:
+            parent[root_right] = root_left
+            rank[root_left] += 1
+        return True
+
+    mst_edges: List[tuple] = []
+
+    for src, dest, weight in sorted(graph.edges, key=lambda edge: (edge[2], edge[0], edge[1])):
+        steps.append({"type": "explore_edge", "src": src, "dest": dest})
+        if union(src, dest):
+            mst_edges.append((src, dest))
+            steps.append({"type": "select_edge", "src": src, "dest": dest})
+        else:
+            steps.append({"type": "discard_edge", "src": src, "dest": dest})
+
+    steps.append({"type": "final_tree", "edges": mst_edges})
+    return steps

@@ -36,6 +36,10 @@ class SandboxScreen:
     def __init__(self, surface: pygame.Surface, controller: "AppController") -> None:
         self.surface  = surface
         self.ctrl     = controller
+        self._current_algorithm: Optional[str] = None
+        self._last_step_type: Optional[str] = None
+        self._code_scroll: int = 0
+        self._code_panel_rect: Optional[pygame.Rect] = None
 
         # Selection state
         self._selected: Optional[int] = None   # first selected node for edge creation
@@ -56,6 +60,10 @@ class SandboxScreen:
         self._error_msg = ""
         self._error_timer = 0.0
 
+        self._selected_algo: Optional[str] = None
+        self._alert_msg: Optional[str] = None
+        self.return_to_menu = False
+
         self._setup_fonts()
         self._setup_ui()
 
@@ -68,10 +76,12 @@ class SandboxScreen:
             self._font_ui    = pygame.font.SysFont("dejavusans", 14)
             self._font_small = pygame.font.SysFont("dejavusans", 12)
             self._font_bold  = pygame.font.SysFont("dejavusans", 15, bold=True)
+            self._font_code  = pygame.font.SysFont("dejavusansmono", 12)
         except Exception:
             self._font_ui    = pygame.font.Font(None, 16)
             self._font_small = pygame.font.Font(None, 14)
             self._font_bold  = pygame.font.Font(None, 16)
+            self._font_code  = pygame.font.Font(None, 14)
 
     # ------------------------------------------------------------------
     # UI panel construction
@@ -105,21 +115,14 @@ class SandboxScreen:
             btn._algo_name = name          # tag for lookup on click
             self._algo_buttons.append(btn)
 
-        # Code panel — sized to exactly cover the algorithm buttons area.
-        # Positioned flush over them so it feels like an in-place overlay.
-        algo_top    = 160                          # y of first algo button
-        algo_bottom = 160 + len(algo_names) * 36  # y below last button
-        panel_rect  = pygame.Rect(
-            W - SIDEBAR_WIDTH,                     # flush with sidebar left edge
-            algo_top,
-            SIDEBAR_WIDTH,                         # full sidebar width
-            algo_bottom - algo_top,
-        )
-        self._code_panel    = AlgorithmCodePanel(rect=panel_rect)
-        self._panel_visible = False                # only shown while executing
-        # Animation controls
         ctrl_y = H - 160
-        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Play")
+
+        self._code_panel = AlgorithmCodePanel(
+            rect=pygame.Rect(sx, 355, 240, 260) # (990, 355, 240, 260) 
+        )
+        
+        # Animation controls
+        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Playyy")
         self._btn_pause = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y, bw // 2 - 4, 30), "⏸ Pause")
         self._btn_step  = Button(pygame.Rect(sx, ctrl_y + 36, bw // 2 - 4, 30), "⏭ Step")
         self._btn_reset = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y + 36, bw // 2 - 4, 30), "↺ Reset")
@@ -144,24 +147,85 @@ class SandboxScreen:
 
         # Clear / export buttons
         self._btn_clear = Button(
-            pygame.Rect(sx, H - 55, bw, 28),
-            "Clear Graph",
+            pygame.Rect(sx, H - 55, bw // 2 - 4, 28),
+            "Clear",
             color=COLOR_DANGER,
             font_size=13,
         )
 
-        # Example graph panel — floating over the canvas, top-left area
-        self._example_panel = GraphExamplePanel(
-            x=14,
-            y=TOPBAR_HEIGHT + 14,
-            on_select=self._load_preset,
+        self._btn_home = Button(
+            pygame.Rect(sx + bw // 2 + 4, H - 55, bw // 2 - 4, 28),
+            "Home",
+            font_size=13,
         )
+
+        # Alert popup OK button
+        self._btn_alert_ok = Button(
+            pygame.Rect(W // 2 - 40, H // 2 + 30, 80, 32),
+            label="OK",
+            font_size=13,
+        )
+        self._algo_code: dict[str, list[str]] = {
+            "kruskal": [
+                "Kruskal(G) :",
+                "A := vide",
+                "pour chaque sommet v de G :",
+                "  creerEnsemble(v)",
+                "trier les aretes de G par poids croissant",
+                "pour chaque arete (u, v) par poids croissant :",
+                "  si find(u) != find(v) :",
+                "    ajouter l'arete (u, v) a A",
+                "    union(u, v)",
+                "renvoyer A",
+            ],
+            "prim": [
+                "Prim(G, s) :",
+                "T := vide",
+                "marquer s comme visite",
+                "ajouter les aretes de s au tas",
+                "tant que le tas n'est pas vide :",
+                "  extraire l'arete (u, v) min",
+                "  si v est deja visite :",
+                "    rejeter l'arete",
+                "  sinon :",
+                "    ajouter l'arete (u, v) a T",
+                "    marquer v comme visite",
+                "    ajouter les aretes de v au tas",
+                "renvoyer T",
+            ],
+        }
+
+        self._algo_step_highlight: dict[str, dict[str, int]] = {
+            "kruskal": {
+                "code_init": 1,
+                "code_sort": 4,
+                "explore_edge": 5,
+                "select_edge": 7,
+                "discard_edge": 5,
+                "final_tree": 9,
+            },
+            "prim": {
+                "visit_node": 2,
+                "explore_edge": 3,
+                "select_edge": 9,
+                "reject_edge": 7,
+                "final_tree": 12,
+            },
+        }
 
     # ------------------------------------------------------------------
     # Event handling
     # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        # Alert popup takes priority
+        if self._alert_msg is not None:
+            if self._btn_alert_ok.handle_event(event):
+                self._alert_msg = None
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN):
+                self._alert_msg = None
+            return
+
         # Weight input popup takes priority
         if self._awaiting_weight:
             self._weight_input.handle_event(event)
@@ -176,6 +240,10 @@ class SandboxScreen:
         # Sidebar widgets
         for btn in self._algo_buttons:
             if btn.handle_event(event):
+                for b in self._algo_buttons:
+                    b.active = False
+                btn.active = True
+                self._selected_algo = btn._algo_name
                 self._run_algorithm(btn._algo_name)
 
         if self._btn_play.handle_event(event):
@@ -186,15 +254,33 @@ class SandboxScreen:
         if self._btn_step.handle_event(event):
             step = self.ctrl.animation_step()
             if step:
+                self._last_step_type = step.get("type")
                 self._status = f"Step: {step.get('type', '?')}"
                 self._code_panel.set_active_event(step["type"])
         if self._btn_reset.handle_event(event):
             self.ctrl.animation_reset()
+            self._last_step_type = None
             self._code_panel.clear_highlight()
-            self._panel_visible = False
         if self._btn_clear.handle_event(event):
             self.ctrl.clear_graph()
+            self._current_algorithm = None
+            self._last_step_type = None
+            self._code_scroll = 0
             self._selected = None
+
+        if self._btn_home.handle_event(event):
+            self.return_to_menu = True
+
+        if self._code_panel_rect:
+            mx, my = pygame.mouse.get_pos()
+            if self._code_panel_rect.collidepoint(mx, my):
+                if event.type == pygame.MOUSEWHEEL:
+                    self._code_scroll = max(0, self._code_scroll - event.y)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 4:
+                        self._code_scroll = max(0, self._code_scroll - 1)
+                    elif event.button == 5:
+                        self._code_scroll += 1
 
         self._slider_speed.handle_event(event)
         self.ctrl.set_animation_speed(self._slider_speed.value)
@@ -335,15 +421,21 @@ class SandboxScreen:
             source = next(iter(self.ctrl.graph.nodes))
         try:
             self.ctrl.run_algorithm(name, source)
+            self._current_algorithm = name
+            self._last_step_type = None
+            self._code_scroll = 0
             self._status = f"Running {name} from node {source}"
+            self.ctrl.animation_play()
             # Load pseudocode for the selected algorithm and reset highlight
             self._code_panel.set_algorithm(name)
             self._code_panel.clear_highlight()
-            
         except NotImplementedError:
             self._set_error(f"{name} is not implemented yet.")
         except Exception as e:
-            self._set_error(str(e))
+            if name == "eulerian":
+                self._alert_msg = str(e)
+            else:
+                self._set_error(str(e))
 
     # ------------------------------------------------------------------
     # Update / Draw
@@ -355,11 +447,14 @@ class SandboxScreen:
             self._error_timer -= dt
         step = self.ctrl.animation_tick(dt)
         if step:
+            self._last_step_type = step.get("type")
+            if self._current_algorithm:
+                algo_name = self._current_algorithm.replace("_", " ").title()
+                self._status = f"{algo_name} | Step: {step.get('type', '?')}"
+            else:
+                self._status = f"Animating: {step.get('type', '?')}"
             self._status = f"Animating: {step.get('type', '?')}"
             self._code_panel.set_active_event(step["type"])
-        # Hide the panel once the engine has exhausted all steps
-        if self.ctrl.engine and self.ctrl.engine.is_finished and not self.ctrl.engine.is_playing:
-            self._panel_visible = False
 
     def draw(self) -> None:
         self.surface.fill(COLOR_BG)
@@ -371,6 +466,8 @@ class SandboxScreen:
         self._draw_status()
         if self._awaiting_weight:
             self._draw_weight_popup()
+        if self._alert_msg is not None:
+            self._draw_alert_popup()
 
     def _draw_canvas_bg(self) -> None:
         """Dot-grid canvas background."""
@@ -410,6 +507,12 @@ class SandboxScreen:
         title = self._font_bold.render("Algorithms", True, COLOR_TEXT)
         self.surface.blit(title, (sb_rect.x + 10, 14))
 
+        current = self._current_algorithm
+        current_text = f"Current: {current.replace('_', ' ').title()}" if current else "Current: none"
+        current_color = COLOR_ACCENT if current else COLOR_TEXT_DIM
+        current_lbl = self._font_small.render(current_text, True, current_color)
+        self.surface.blit(current_lbl, (sb_rect.x + 10, 36))
+
         # Live graph info
         self._lbl_nodes.text = f"Nodes: {self.ctrl.graph.node_count()}"
         self._lbl_edges.text = f"Edges: {self.ctrl.graph.edge_count()}"
@@ -417,16 +520,20 @@ class SandboxScreen:
         self._lbl_edges.draw(self.surface)
         self._lbl_type.draw(self.surface)
 
-        # Algorithm buttons (only shown when panel is hidden)
-        if not self._panel_visible:
-            for btn in self._algo_buttons:
-                btn.draw(self.surface)
+        # Algorithm buttons
+        for btn in self._algo_buttons:
+            btn.active = getattr(btn, "_algo_name", None) == current
+        for btn in self._algo_buttons:
+            btn.draw(self.surface)
+
+        self._draw_algorithm_code(sb_rect)
 
         # Animation controls
         self._btn_play.draw(self.surface)
         self._btn_pause.draw(self.surface)
         self._btn_step.draw(self.surface)
         self._btn_reset.draw(self.surface)
+        self._code_panel.draw(surface=self.surface)
 
         # Code panel — drawn last so it overlays the algorithm buttons
         if self._panel_visible:
@@ -438,6 +545,7 @@ class SandboxScreen:
         self._slider_speed.draw(self.surface)
 
         self._btn_clear.draw(self.surface)
+        self._btn_home.draw(self.surface)
 
         # Progress bar
         if self.ctrl.engine:
@@ -464,12 +572,106 @@ class SandboxScreen:
                          (0, TOPBAR_HEIGHT), (top_rect.right, TOPBAR_HEIGHT), 1)
         lbl = self._font_bold.render("Graph Algorithms Visualization Platform", True, COLOR_TEXT)
         self.surface.blit(lbl, (14, TOPBAR_HEIGHT // 2 - lbl.get_height() // 2))
+        if self._current_algorithm:
+            algo_name = self._current_algorithm.replace("_", " ").title()
+            algo_lbl = self._font_small.render(f"Algorithm: {algo_name}", True, COLOR_ACCENT)
+            self.surface.blit(algo_lbl, (14, 38))
         hint = self._font_small.render(
             "LClick:add node | Select + LClick:edge | RClick:delete | MMB:pan",
             True, COLOR_TEXT_DIM,
         )
         self.surface.blit(hint, (WINDOW_WIDTH - SIDEBAR_WIDTH - hint.get_width() - 12,
                                  TOPBAR_HEIGHT // 2 - hint.get_height() // 2))
+
+    def _draw_algorithm_code(self, sb_rect: pygame.Rect) -> None:
+        algo_name = self._current_algorithm or ""
+        code_lines = self._algo_code.get(algo_name, [])
+        start_y = 160 + len(self._algo_buttons) * 36 + 10
+        end_y = WINDOW_HEIGHT - 170
+        if end_y <= start_y + 20:
+            return
+
+        panel = pygame.Rect(sb_rect.x + 10, start_y, SIDEBAR_WIDTH - 20, end_y - start_y)
+        self._code_panel_rect = panel
+        pygame.draw.rect(self.surface, (16, 19, 30), panel, border_radius=6)
+        pygame.draw.rect(self.surface, COLOR_BORDER, panel, 1, border_radius=6)
+
+        header = self._font_small.render("Algorithm code", True, COLOR_TEXT)
+        self.surface.blit(header, (panel.x + 8, panel.y + 6))
+
+        if not code_lines:
+            msg = self._font_small.render("Select an algorithm to view code.", True, COLOR_TEXT_DIM)
+            self.surface.blit(msg, (panel.x + 8, panel.y + 28))
+            return
+
+        highlight_map = self._algo_step_highlight.get(algo_name, {})
+        highlight_index = highlight_map.get(self._last_step_type or "", -1)
+
+        def _wrap_line(text: str, max_width: int) -> list[str]:
+            if self._font_code.size(text)[0] <= max_width:
+                return [text]
+            words = text.split(" ")
+            lines: list[str] = []
+            current = ""
+            for word in words:
+                candidate = f"{current} {word}".strip()
+                if self._font_code.size(candidate)[0] <= max_width:
+                    current = candidate
+                else:
+                    if current:
+                        lines.append(current)
+                    current = word
+            if current:
+                lines.append(current)
+            return lines
+
+        max_text_width = panel.width - 20
+        wrapped_lines: list[tuple[int, str]] = []
+        for idx, line in enumerate(code_lines):
+            for segment in _wrap_line(line, max_text_width):
+                wrapped_lines.append((idx, segment))
+
+        line_y = panel.y + 28
+        line_h = self._font_code.get_height() + 4
+        max_lines = max(1, (panel.height - 34) // line_h)
+
+        total_lines = len(wrapped_lines)
+        max_scroll = max(0, total_lines - max_lines)
+        if self._code_scroll > max_scroll:
+            self._code_scroll = max_scroll
+
+        start_idx = self._code_scroll
+        end_idx = min(total_lines, start_idx + max_lines)
+
+        if highlight_index >= 0:
+            highlight_wrapped_idx = None
+            for i, (orig_idx, _) in enumerate(wrapped_lines):
+                if orig_idx == highlight_index:
+                    highlight_wrapped_idx = i
+                    break
+            if highlight_wrapped_idx is not None:
+                if highlight_wrapped_idx < start_idx:
+                    self._code_scroll = highlight_wrapped_idx
+                elif highlight_wrapped_idx >= end_idx:
+                    self._code_scroll = max(0, highlight_wrapped_idx - max_lines + 1)
+
+                start_idx = self._code_scroll
+                end_idx = min(total_lines, start_idx + max_lines)
+
+        highlight_map = self._algo_step_highlight.get(algo_name, {})
+        highlight_index = highlight_map.get(self._last_step_type or "", -1)
+
+        for _, (orig_idx, line) in enumerate(wrapped_lines[start_idx:end_idx], start=start_idx):
+            is_highlight = orig_idx == highlight_index
+            color = COLOR_TEXT
+            if is_highlight:
+                hl_rect = pygame.Rect(panel.x + 6, line_y - 1, panel.width - 12, line_h)
+                pygame.draw.rect(self.surface, (255, 230, 120), hl_rect, border_radius=4)
+                pygame.draw.rect(self.surface, (255, 255, 255), hl_rect, 1, border_radius=4)
+                color = (10, 12, 20)
+            text = self._font_code.render(line, True, color)
+            self.surface.blit(text, (panel.x + 10, line_y))
+            line_y += line_h
 
     def _draw_status(self) -> None:
         H = WINDOW_HEIGHT
@@ -494,6 +696,20 @@ class SandboxScreen:
         self.surface.blit(lbl, lbl.get_rect(center=(W // 2, H // 2 - 38)))
         self._weight_input.draw(self.surface)
         self._btn_confirm_weight.draw(self.surface)
+
+    def _draw_alert_popup(self) -> None:
+        W, H = WINDOW_WIDTH, WINDOW_HEIGHT
+        overlay = pygame.Surface((W, H), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        self.surface.blit(overlay, (0, 0))
+        popup = pygame.Rect(W // 2 - 250, H // 2 - 60, 500, 120)
+        pygame.draw.rect(self.surface, COLOR_PANEL, popup, border_radius=8)
+        pygame.draw.rect(self.surface, COLOR_BORDER, popup, 2, border_radius=8)
+        
+        lbl = self._font_ui.render(str(self._alert_msg), True, COLOR_TEXT)
+        self.surface.blit(lbl, lbl.get_rect(center=(W // 2, H // 2 - 20)))
+        
+        self._btn_alert_ok.draw(self.surface)
 
     # ------------------------------------------------------------------
     # Geometry helpers
