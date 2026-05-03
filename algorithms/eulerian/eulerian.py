@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 
 from animation.events import VISIT_NODE, TRAVERSE_EDGE, FINAL_PATH
+from algorithms.components.connected import connected_components
+from algorithms.components.scc import strongly_connected_components
 
 def eulerian(graph: "Graph", source: int = None) -> List[Dict]:
     """
@@ -85,6 +87,16 @@ def eulerian(graph: "Graph", source: int = None) -> List[Dict]:
                     
     if total_edges == 0:
         raise ValueError("Graphe sans arêtes")
+
+    # 0. Vérification de la connexité (Pré-requis du Théorème d'Euler)
+    if graph.directed:
+        _, sccs = strongly_connected_components(graph)
+        if len(sccs) != 1:
+            raise ValueError("Le graphe orienté n'est pas fortement connexe (plus d'une composante).")
+    else:
+        _, ccs = connected_components(graph)
+        if len(ccs) != 1:
+            raise ValueError("Le graphe n'est pas connexe (plus d'une composante).")
 
     # 1. Application du Théorème d'Euler
     eulerian_type = ""

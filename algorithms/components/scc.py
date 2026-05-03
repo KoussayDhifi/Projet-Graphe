@@ -104,4 +104,4 @@ def strongly_connected_components(graph: "Graph", source: int = None) -> List[Di
     for i, comp in enumerate(components):
         print(f"Component {i}: {comp}")
         
-    return steps
+    return steps, components
