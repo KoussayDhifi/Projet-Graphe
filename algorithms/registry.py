@@ -45,15 +45,16 @@ def register(name: str) -> Callable:
     return decorator
 
 
-def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
+def run_algorithm(name: str, graph: "Graph", source: int = None, destination: int = None) -> List[Dict]:
     """
     Look up and execute a registered algorithm by name.
 
     Parameters
     ----------
-    name   : str         – the registered algorithm name
-    graph  : Graph       – the graph to run on
-    source : int | None  – source node (required by most algorithms)
+    name        : str         – the registered algorithm name
+    graph       : Graph       – the graph to run on
+    source      : int | None  – source node (required by most algorithms)
+    destination : int | None  – destination node (optional, for path-finding algorithms)
 
     Returns
     -------
@@ -72,7 +73,13 @@ def run_algorithm(name: str, graph: "Graph", source: int = None) -> List[Dict]:
             f"Algorithm '{name}' is not registered. "
             f"Available: {sorted(ALGORITHMS.keys())}"
         )
-    return ALGORITHMS[name](graph, source)
+    
+    # Try to call with destination parameter (for traversal/path-finding algorithms)
+    try:
+        return ALGORITHMS[name](graph, source, destination)
+    except TypeError:
+        # Fall back to calling without destination (for other algorithms)
+        return ALGORITHMS[name](graph, source)
 
 
 def list_algorithms() -> List[str]:
@@ -91,6 +98,7 @@ def list_algorithms() -> List[str]:
 def _auto_register() -> None:
     from algorithms.shortest_path.dijkstra    import dijkstra
     from algorithms.shortest_path.bellman_ford import bellman_ford
+    from algorithms.shortest_path.bellman import bellman
     from algorithms.mst.kruskal               import kruskal
     from algorithms.mst.prim                  import prim
     from algorithms.traversal.bfs             import bfs
@@ -98,17 +106,18 @@ def _auto_register() -> None:
     from algorithms.components.connected      import connected_components
     from algorithms.components.scc            import strongly_connected_components
     from algorithms.coloring.welsh_powell     import welsh_powell
+    from algorithms.eulerian.eulerian         import eulerian
 
     ALGORITHMS.update({
         "dijkstra":          dijkstra,
         "bellman_ford":      bellman_ford,
         "kruskal":           kruskal,
         "prim":              prim,
-        "bfs":               bfs,
-        "dfs":               dfs,
+        "bellman":           bellman,
         "connected":         connected_components,
         "scc":               strongly_connected_components,
         "welsh_powell":      welsh_powell,
+        "eulerian":          eulerian,
     })
 
 

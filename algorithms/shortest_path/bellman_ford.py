@@ -1,7 +1,3 @@
-# ============================================================
-# algorithms/shortest_path/bellman_ford.py
-# ============================================================
-
 from __future__ import annotations
 from typing import List, Dict, TYPE_CHECKING
 

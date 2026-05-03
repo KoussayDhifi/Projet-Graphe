@@ -28,58 +28,65 @@ def main() -> None:
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     clock  = pygame.time.Clock()
 
-    # ------------------------------------------------------------------
-    # 2. Menu screen
-    # ------------------------------------------------------------------
-    from ui.menu import MenuScreen
-    menu = MenuScreen(screen)
+    while True:
+        # ------------------------------------------------------------------
+        # 2. Menu screen
+        # ------------------------------------------------------------------
+        from ui.menu import MenuScreen
+        menu = MenuScreen(screen)
 
-    while not menu.done:
-        dt = clock.tick(FPS) / 1000.0
+        while not menu.done:
+            dt = clock.tick(FPS) / 1000.0
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit(0)
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                pygame.quit()
-                sys.exit(0)
-            menu.handle_event(event)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit(0)
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit(0)
+                menu.handle_event(event)
 
-        menu.update(dt)
-        menu.draw()
-        pygame.display.flip()
+            menu.update(dt)
+            menu.draw()
+            pygame.display.flip()
 
-    # ------------------------------------------------------------------
-    # 3. Build controller with menu choices
-    # ------------------------------------------------------------------
-    from controller.app_controller import AppController
-    controller = AppController(
-        directed=menu.directed,
-        weighted=menu.weighted,
-    )
+        # ------------------------------------------------------------------
+        # 3. Build controller with menu choices
+        # ------------------------------------------------------------------
+        from controller.app_controller import AppController
+        controller = AppController(
+            directed=menu.directed,
+            weighted=menu.weighted,
+        )
 
-    # ------------------------------------------------------------------
-    # 4. Sandbox screen
-    # ------------------------------------------------------------------
-    from ui.sandbox import SandboxScreen
-    sandbox = SandboxScreen(screen, controller)
+        # ------------------------------------------------------------------
+        # 4. Sandbox screen
+        # ------------------------------------------------------------------
+        from ui.sandbox import SandboxScreen
+        sandbox = SandboxScreen(screen, controller)
 
-    running = True
-    while running:
-        dt = clock.tick(FPS) / 1000.0
+        running = True
+        while running:
+            dt = clock.tick(FPS) / 1000.0
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running = False
-            sandbox.handle_event(event)
-            sandbox._code_panel.handle_event(event)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    running = False
+                sandbox.handle_event(event)
+                sandbox._code_panel.handle_event(event)
 
-        sandbox.update(dt)
-        sandbox.draw()
-        pygame.display.flip()
+            if getattr(sandbox, 'return_to_menu', False):
+                break
+
+            sandbox.update(dt)
+            sandbox.draw()
+            pygame.display.flip()
+
+        if not getattr(sandbox, 'return_to_menu', False):
+            break
 
     # ------------------------------------------------------------------
     # 5. Clean exit

@@ -328,6 +328,27 @@ ALGO_PSEUDOCODE: dict[str, list[str]] = {
         "      nbr_colors",
         "    color_map[u] = color",
     ],
+    "eulerian": [
+        "Eulerian(G, source):",
+        "  check Euler conditions:",
+        "    if all degrees even:",
+        "      → Eulerian circuit",
+        "    if exactly 2 odd degrees:",
+        "      → Eulerian path",
+        "    else: no Eulerian path",
+        "  Hierholzer:",
+        "  stack = [start_node]",
+        "  path = []",
+        "  while stack not empty:",
+        "    u = peek(stack)",
+        "    if u has unused edges:",
+        "      v = next neighbour of u",
+        "      remove edge (u, v)",
+        "      push v onto stack",
+        "    else:",
+        "      path.prepend(pop(stack))",
+        "  return path",
+    ],
 }
 
 # Maps event types emitted by each algorithm to the pseudocode

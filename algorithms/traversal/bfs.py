@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 from typing import List, Dict, TYPE_CHECKING
+from collections import deque
 
 if TYPE_CHECKING:
     from core.graph import Graph
@@ -11,36 +12,53 @@ if TYPE_CHECKING:
 
 def bfs(graph: "Graph", source: int) -> List[Dict]:
     """
-    Traverse the graph using Breadth-First Search (BFS).
-
-    BFS explores nodes level by level, visiting all neighbours of the
-    current node before moving to the next level.  It uses a FIFO queue.
-    BFS produces a BFS tree and can be used to find shortest paths in
-    unweighted graphs.
-
-    Parameters
-    ----------
-    graph  : Graph  – the input graph (directed or undirected)
-    source : int    – the starting node ID
-
-    Returns
-    -------
-    List[Dict]
-        Animation steps following the event protocol.  Expected events:
-
-        - VISIT_NODE     : when a node is enqueued for the first time
-        - PROCESS_NODE   : when a node is dequeued and processed
-        - TRAVERSE_EDGE  : when the BFS moves along a tree edge
-        - REJECT_EDGE    : when a cross / back edge is encountered
-
-    Complexity
-    ----------
-    Time  : O(V + E)
-    Space : O(V)
-
-    Raises
-    ------
-    NotImplementedError
-        Placeholder — to be implemented by the algorithm team.
+    Breadth-First Search with animation steps.
     """
-    raise NotImplementedError("bfs() has not been implemented yet.")
+
+    steps: List[Dict] = []
+
+    # Use adjacency list for efficiency
+    adj = graph.to_adj_list()
+
+    visited = set()
+    queue = deque()
+
+    # Initialize
+    visited.add(source)
+    queue.append(source)
+
+    steps.append({"type": "visit_node", "node": source})
+
+    while queue:
+        current = queue.popleft()
+        steps.append({"type": "process_node", "node": current})
+
+        for neighbor, _ in adj[current]:
+            steps.append({
+                "type": "explore_edge",
+                "src": current,
+                "dest": neighbor
+            })
+
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+                steps.append({
+                    "type": "traverse_edge",
+                    "src": current,
+                    "dest": neighbor
+                })
+
+                steps.append({
+                    "type": "visit_node",
+                    "node": neighbor
+                })
+            else:
+                steps.append({
+                    "type": "reject_edge",
+                    "src": current,
+                    "dest": neighbor
+                })
+
+    return steps
