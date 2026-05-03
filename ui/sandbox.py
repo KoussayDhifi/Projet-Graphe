@@ -475,6 +475,13 @@ class SandboxScreen:
             self.ctrl.animation_play()
             # Load pseudocode for the selected algorithm and reset highlight
             self._code_panel.set_algorithm(name)
+            # If the sandbox provides a local pseudocode mapping, use it
+            if name in self._algo_code:
+                # override the lines in the code panel with our local copy
+                self._code_panel._lines = self._algo_code[name]
+            # If we have a local event->line map, apply it as well
+            if name in self._algo_step_highlight:
+                self._code_panel._event_map = self._algo_step_highlight[name]
             self._code_panel.clear_highlight()
         except NotImplementedError:
             self._set_error(f"{name} is not implemented yet.")
