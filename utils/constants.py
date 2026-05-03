@@ -3,47 +3,47 @@
 # ============================================================
 
 # --- Window ---
-WINDOW_WIDTH = 1400
-WINDOW_HEIGHT = 900
+WINDOW_WIDTH = 1000
+WINDOW_HEIGHT = 700
 WINDOW_TITLE = "Graph Algorithms Visualization Platform"
 FPS = 60
 
 # --- Colors (R, G, B) ---
-COLOR_BG          = (15,  17,  26)
-COLOR_PANEL       = (22,  26,  40)
-COLOR_BORDER      = (50,  60,  90)
-COLOR_TEXT        = (220, 230, 255)
-COLOR_TEXT_DIM    = (120, 130, 160)
-COLOR_ACCENT      = (80,  160, 255)
-COLOR_SUCCESS     = (60,  210, 120)
-COLOR_WARNING     = (255, 200,  60)
-COLOR_DANGER      = (255,  80,  80)
+COLOR_BG             = (248, 249, 250)  # Clean, soft light gray
+COLOR_PANEL          = (255, 255, 255)  # Pure white for panels
+COLOR_BORDER         = (210, 215, 220)  # Subtle gray border
+COLOR_TEXT           = (40,  45,  55)   # Dark slate for high readability
+COLOR_TEXT_DIM       = (110, 120, 130)  # Muted gray for secondary text
+COLOR_ACCENT         = (0,   122, 255)  # Vibrant primary blue
+COLOR_SUCCESS        = (35,  200, 100)  # Crisp, bright green
+COLOR_WARNING        = (255, 150, 40)   # Punchy orange
+COLOR_DANGER         = (240, 60,  80)   # Vivid red
 
 # --- Node visual ---
-NODE_RADIUS       = 22
-NODE_COLOR_DEFAULT = (40,  55,  90)
-NODE_COLOR_BORDER  = (80, 120, 200)
-NODE_COLOR_VISITED = (60, 180, 255)
-NODE_COLOR_PROCESSED = (40, 210, 130)
-NODE_COLOR_SOURCE  = (255, 180,  50)
-NODE_COLOR_PATH    = (255, 100, 180)
+NODE_RADIUS          = 22
+NODE_COLOR_DEFAULT   = (230, 240, 255)  # Soft blue fill for default nodes
+NODE_COLOR_BORDER    = (60,  130, 240)  # Stronger blue border for contrast
+NODE_COLOR_VISITED   = (0,   190, 230)  # Vibrant cyan
+NODE_COLOR_PROCESSED = (35,  200, 100)  # Bright green (matches success)
+NODE_COLOR_SOURCE    = (255, 150, 40)   # Bright orange (matches warning)
+NODE_COLOR_PATH      = (170, 255, 0)  # Hot pink/magenta for clear path tracing
 NODE_COLOR_COMPONENT = [
-    (120,  80, 220),
-    (80,  200, 120),
-    (220, 120,  60),
-    (60,  180, 220),
-    (220,  60, 120),
+    (140, 70,  240),  # Vibrant violet
+    (20,  200, 130),  # Vivid mint green
+    (255, 120, 60),   # Vivid tangerine
+    (20,  180, 255),  # Vivid azure blue
+    (245, 80,  140),  # Vivid rose pink
 ]
 
 # --- Edge visual ---
 EDGE_WIDTH         = 2
-EDGE_COLOR_DEFAULT = (60,  75, 110)
-EDGE_COLOR_EXPLORE = (80, 160, 255)
-EDGE_COLOR_RELAX   = (255, 200,  60)
-EDGE_COLOR_REJECT  = (180,  50,  50)
-EDGE_COLOR_SELECT  = (60,  210, 130)
-EDGE_COLOR_DISCARD = (100,  60,  60)
-EDGE_COLOR_FINAL   = (255, 100, 180)
+EDGE_COLOR_DEFAULT = (180, 190, 205)  # Soft medium-gray/blue so it doesn't clutter the screen
+EDGE_COLOR_EXPLORE = (0,   122, 255)  # Vibrant primary blue (matches accent)
+EDGE_COLOR_RELAX   = (255, 150, 40)   # Punchy orange (matches warning)
+EDGE_COLOR_REJECT  = (240, 60,  80)   # Vivid red (matches danger)
+EDGE_COLOR_SELECT  = (35,  200, 100)  # Crisp green (matches success)
+EDGE_COLOR_DISCARD = (220, 170, 175)  # Faded, muted red-gray for ignored/discarded paths
+EDGE_COLOR_FINAL   = (170, 255, 0) # Hot pink/magenta (matches NODE_COLOR_PATH)
 
 # --- Animation ---
 ANIMATION_SPEED_DEFAULT = 0.5   # seconds per step

@@ -8,6 +8,8 @@ from typing import List, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from core.graph import Graph
 
+from collections import deque
+from animation.events import NEW_COMPONENT, ADD_TO_COMPONENT, VISIT_NODE, TRAVERSE_EDGE
 
 def connected_components(graph: "Graph", source: int = None) -> List[Dict]:
     """
@@ -35,12 +37,51 @@ def connected_components(graph: "Graph", source: int = None) -> List[Dict]:
     ----------
     Time  : O(V + E)
     Space : O(V)
-
-    Raises
-    ------
-    NotImplementedError
-        Placeholder — to be implemented by the algorithm team.
     """
-    raise NotImplementedError(
-        "connected_components() has not been implemented yet."
-    )
+    steps = []
+    matrix = graph.to_matrix()
+    nodes = sorted(graph.nodes.keys())
+    
+    if not nodes:
+        print("Composants connexes : []")
+        return steps
+        
+    id_to_idx = {nid: i for i, nid in enumerate(nodes)}
+    idx_to_id = {i: nid for i, nid in enumerate(nodes)}
+    
+    visited = set()
+    components = []
+    component_id = 0
+    
+    for node_id in nodes:
+        if node_id not in visited:
+            steps.append({"type": NEW_COMPONENT, "component_id": component_id})
+            current_component = []
+            
+            queue = deque([node_id])
+            visited.add(node_id)
+            steps.append({"type": VISIT_NODE, "node": node_id})
+            
+            while queue:
+                curr = queue.popleft()
+                steps.append({"type": ADD_TO_COMPONENT, "node": curr, "component_id": component_id})
+                current_component.append(curr)
+                
+                curr_idx = id_to_idx[curr]
+                for nxt_idx, weight in enumerate(matrix[curr_idx]):
+                    if weight != float('inf') and weight != 0.0:
+                        nxt = idx_to_id[nxt_idx]
+                        if nxt not in visited:
+                            steps.append({"type": TRAVERSE_EDGE, "src": curr, "dest": nxt})
+                            visited.add(nxt)
+                            steps.append({"type": VISIT_NODE, "node": nxt})
+                            queue.append(nxt)
+            
+            components.append(current_component)
+            component_id += 1
+            
+    print("Composants connexes :")
+    for i, comp in enumerate(components):
+        print(f"Component {i}: {comp}")
+        
+    return steps

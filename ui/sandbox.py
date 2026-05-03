@@ -13,7 +13,7 @@ from utils.constants import (
     ANIMATION_SPEED_DEFAULT, ANIMATION_SPEED_MIN, ANIMATION_SPEED_MAX,
 )
 from ui.draw import draw_graph, draw_status_bar, draw_tooltip
-from ui.widgets import Button, Slider, TextInput, Label
+from ui.widgets import Button, Slider, TextInput, Label, AlgorithmCodePanel, GraphExamplePanel
 
 if TYPE_CHECKING:
     from controller.app_controller import AppController
@@ -59,6 +59,10 @@ class SandboxScreen:
         self._status = "Left-click to add nodes | Select two nodes to add an edge"
         self._error_msg = ""
         self._error_timer = 0.0
+
+        self._selected_algo: Optional[str] = None
+        self._alert_msg: Optional[str] = None
+        self.return_to_menu = False
 
         self._setup_fonts()
         self._setup_ui()
@@ -111,9 +115,14 @@ class SandboxScreen:
             btn._algo_name = name          # tag for lookup on click
             self._algo_buttons.append(btn)
 
-        # Animation controls
         ctrl_y = H - 160
-        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Play")
+
+        self._code_panel = AlgorithmCodePanel(
+            rect=pygame.Rect(sx, 355, 240, 260) # (990, 355, 240, 260) 
+        )
+        
+        # Animation controls
+        self._btn_play  = Button(pygame.Rect(sx, ctrl_y,      bw // 2 - 4, 30), "▶ Playyy")
         self._btn_pause = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y, bw // 2 - 4, 30), "⏸ Pause")
         self._btn_step  = Button(pygame.Rect(sx, ctrl_y + 36, bw // 2 - 4, 30), "⏭ Step")
         self._btn_reset = Button(pygame.Rect(sx + bw // 2 + 4, ctrl_y + 36, bw // 2 - 4, 30), "↺ Reset")
@@ -138,12 +147,24 @@ class SandboxScreen:
 
         # Clear / export buttons
         self._btn_clear = Button(
-            pygame.Rect(sx, H - 55, bw, 28),
-            "Clear Graph",
+            pygame.Rect(sx, H - 55, bw // 2 - 4, 28),
+            "Clear",
             color=COLOR_DANGER,
             font_size=13,
         )
 
+        self._btn_home = Button(
+            pygame.Rect(sx + bw // 2 + 4, H - 55, bw // 2 - 4, 28),
+            "Home",
+            font_size=13,
+        )
+
+        # Alert popup OK button
+        self._btn_alert_ok = Button(
+            pygame.Rect(W // 2 - 40, H // 2 + 30, 80, 32),
+            label="OK",
+            font_size=13,
+        )
         self._algo_code: dict[str, list[str]] = {
             "kruskal": [
                 "Kruskal(G) :",
@@ -197,6 +218,14 @@ class SandboxScreen:
     # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        # Alert popup takes priority
+        if self._alert_msg is not None:
+            if self._btn_alert_ok.handle_event(event):
+                self._alert_msg = None
+            if event.type == pygame.KEYDOWN and (event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN):
+                self._alert_msg = None
+            return
+
         # Weight input popup takes priority
         if self._awaiting_weight:
             self._weight_input.handle_event(event)
@@ -211,10 +240,15 @@ class SandboxScreen:
         # Sidebar widgets
         for btn in self._algo_buttons:
             if btn.handle_event(event):
+                for b in self._algo_buttons:
+                    b.active = False
+                btn.active = True
+                self._selected_algo = btn._algo_name
                 self._run_algorithm(btn._algo_name)
 
         if self._btn_play.handle_event(event):
             self.ctrl.animation_play()
+            self._panel_visible = True
         if self._btn_pause.handle_event(event):
             self.ctrl.animation_pause()
         if self._btn_step.handle_event(event):
@@ -222,15 +256,20 @@ class SandboxScreen:
             if step:
                 self._last_step_type = step.get("type")
                 self._status = f"Step: {step.get('type', '?')}"
+                self._code_panel.set_active_event(step["type"])
         if self._btn_reset.handle_event(event):
             self.ctrl.animation_reset()
             self._last_step_type = None
+            self._code_panel.clear_highlight()
         if self._btn_clear.handle_event(event):
             self.ctrl.clear_graph()
             self._current_algorithm = None
             self._last_step_type = None
             self._code_scroll = 0
             self._selected = None
+
+        if self._btn_home.handle_event(event):
+            self.return_to_menu = True
 
         if self._code_panel_rect:
             mx, my = pygame.mouse.get_pos()
@@ -246,13 +285,22 @@ class SandboxScreen:
         self._slider_speed.handle_event(event)
         self.ctrl.set_animation_speed(self._slider_speed.value)
 
-        # Canvas mouse events
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            self._on_mouse_down(event)
-        if event.type == pygame.MOUSEBUTTONUP:
-            self._on_mouse_up(event)
-        if event.type == pygame.MOUSEMOTION:
-            self._on_mouse_move(event)
+        # Example panel (intercepts clicks before canvas)
+        preset_key = self._example_panel.handle_event(event)
+        if preset_key:
+            self._load_preset(preset_key)
+
+        # Canvas mouse events — skip if pointer is over the example panel
+        in_panel = self._example_panel.rect.collidepoint(
+            getattr(event, "pos", (-1, -1))
+        )
+        if not in_panel:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self._on_mouse_down(event)
+            if event.type == pygame.MOUSEBUTTONUP:
+                self._on_mouse_up(event)
+            if event.type == pygame.MOUSEMOTION:
+                self._on_mouse_move(event)
 
     def _on_mouse_down(self, event: pygame.event.Event) -> None:
         if not self._is_canvas_pos(event.pos):
@@ -341,6 +389,28 @@ class SandboxScreen:
         self._selected = None
 
     # ------------------------------------------------------------------
+    # Example graph loader
+    # ------------------------------------------------------------------
+
+    def _load_preset(self, key: str) -> None:
+        """Clear the canvas and populate it with the chosen preset graph."""
+        from utils.graph_presets import generate_preset
+        self.ctrl.clear_graph()
+        self._selected = None
+        self._panel_visible = False
+        # Centre in the visible canvas area
+        canvas_w = WINDOW_WIDTH - SIDEBAR_WIDTH
+        canvas_h = WINDOW_HEIGHT - TOPBAR_HEIGHT - 24
+        cx = canvas_w // 2 - self._offset[0]
+        cy = TOPBAR_HEIGHT + canvas_h // 2 - self._offset[1]
+        try:
+            generate_preset(key, self.ctrl.graph, cx, cy)
+            label = key.replace("_", " ").title()
+            self._status = f"Loaded preset: {label}"
+        except Exception as e:
+            self._set_error(str(e))
+
+    # ------------------------------------------------------------------
     # Algorithm runner
     # ------------------------------------------------------------------
 
@@ -355,10 +425,17 @@ class SandboxScreen:
             self._last_step_type = None
             self._code_scroll = 0
             self._status = f"Running {name} from node {source}"
+            self.ctrl.animation_play()
+            # Load pseudocode for the selected algorithm and reset highlight
+            self._code_panel.set_algorithm(name)
+            self._code_panel.clear_highlight()
         except NotImplementedError:
             self._set_error(f"{name} is not implemented yet.")
         except Exception as e:
-            self._set_error(str(e))
+            if name == "eulerian":
+                self._alert_msg = str(e)
+            else:
+                self._set_error(str(e))
 
     # ------------------------------------------------------------------
     # Update / Draw
@@ -376,16 +453,21 @@ class SandboxScreen:
                 self._status = f"{algo_name} | Step: {step.get('type', '?')}"
             else:
                 self._status = f"Animating: {step.get('type', '?')}"
+            self._status = f"Animating: {step.get('type', '?')}"
+            self._code_panel.set_active_event(step["type"])
 
     def draw(self) -> None:
         self.surface.fill(COLOR_BG)
         self._draw_canvas_bg()
         self._draw_graph()
+        self._example_panel.draw(self.surface)
         self._draw_sidebar()
         self._draw_topbar()
         self._draw_status()
         if self._awaiting_weight:
             self._draw_weight_popup()
+        if self._alert_msg is not None:
+            self._draw_alert_popup()
 
     def _draw_canvas_bg(self) -> None:
         """Dot-grid canvas background."""
@@ -451,6 +533,11 @@ class SandboxScreen:
         self._btn_pause.draw(self.surface)
         self._btn_step.draw(self.surface)
         self._btn_reset.draw(self.surface)
+        self._code_panel.draw(surface=self.surface)
+
+        # Code panel — drawn last so it overlays the algorithm buttons
+        if self._panel_visible:
+            self._code_panel.draw(surface=self.surface)
 
         # Speed slider label
         spd_lbl = self._font_small.render("Step speed:", True, COLOR_TEXT_DIM)
@@ -458,6 +545,7 @@ class SandboxScreen:
         self._slider_speed.draw(self.surface)
 
         self._btn_clear.draw(self.surface)
+        self._btn_home.draw(self.surface)
 
         # Progress bar
         if self.ctrl.engine:
@@ -608,6 +696,20 @@ class SandboxScreen:
         self.surface.blit(lbl, lbl.get_rect(center=(W // 2, H // 2 - 38)))
         self._weight_input.draw(self.surface)
         self._btn_confirm_weight.draw(self.surface)
+
+    def _draw_alert_popup(self) -> None:
+        W, H = WINDOW_WIDTH, WINDOW_HEIGHT
+        overlay = pygame.Surface((W, H), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        self.surface.blit(overlay, (0, 0))
+        popup = pygame.Rect(W // 2 - 250, H // 2 - 60, 500, 120)
+        pygame.draw.rect(self.surface, COLOR_PANEL, popup, border_radius=8)
+        pygame.draw.rect(self.surface, COLOR_BORDER, popup, 2, border_radius=8)
+        
+        lbl = self._font_ui.render(str(self._alert_msg), True, COLOR_TEXT)
+        self.surface.blit(lbl, lbl.get_rect(center=(W // 2, H // 2 - 20)))
+        
+        self._btn_alert_ok.draw(self.surface)
 
     # ------------------------------------------------------------------
     # Geometry helpers
